@@ -36,7 +36,7 @@ Tests whether the design is well-specified — NOT whether code works.
 - [ ] CHK017 Are pagination/limit requirements defined for unbounded list fields (members, contribution records, goals)? [Gap, Contracts schema.graphql]
 - [ ] CHK018 Is the GraphQL schema versioning and deprecation policy documented as a requirement? [Clarity, Plan §R2]
 - [ ] CHK019 Are nullability and permission-scoping semantics defined for fields that vary by role (e.g., `standing`, `members`)? [Consistency, Contracts schema.graphql]
-- [ ] CHK020 Is the `Money.amountCents` scalar's numeric range sufficient and specified (32-bit Int vs 64-bit) for maximum balances? [Ambiguity, Contracts schema.graphql]
+- [x] CHK020 Is the `Money.amountCents` scalar's numeric range sufficient and specified (32-bit Int vs 64-bit) for maximum balances? [Ambiguity, Contracts schema.graphql] — RESOLVED: 64-bit `BigInt` scalar end-to-end (research R13).
 - [ ] CHK021 Are authorization/scoping requirements defined for GraphQL subscriptions? [Gap, Contracts schema.graphql §Subscription]
 - [ ] CHK022 Is an ID/traceability scheme established linking schema operations and events back to FR/SC identifiers? [Traceability, Contracts]
 

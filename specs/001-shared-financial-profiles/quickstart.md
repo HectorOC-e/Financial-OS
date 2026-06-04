@@ -26,15 +26,21 @@ pnpm start:dev                                 # GraphQL at http://localhost:300
 
 Run these GraphQL operations (e.g., in the playground) in order. Each maps to a user story / requirement.
 
-### 1. Create & govern a shared profile (US1, FR-002/FR-005/FR-007)
-1. `createSharedProfile` → caller becomes OWNER; profile appears.
+### 1. Create & govern a shared profile (US1, FR-002/FR-002a/FR-005/FR-007/FR-007c)
+1. `createSharedProfile` → caller becomes OWNER; profile appears with `status: ACTIVE`.
 2. `inviteMember` (role CONTRIBUTOR) then `acceptInvitation` → member becomes ACTIVE.
-3. As the VIEWER member, attempt `setAllocation` → **expect permission error, no state change** (SC-003).
-4. Query another member's `me.personalProfile.accounts` from the shared context → **expect none visible**
+3. `inviteMember` then `declineInvitation` → status DECLINED, no access (FR-002a); an unanswered invite
+   shows `invitationExpiresAt` ≈ now+14d and auto-transitions to EXPIRED after the window.
+4. As the VIEWER member, attempt `setAllocation` → **expect permission error, no state change** (SC-003).
+5. Query another member's `me.personalProfile.accounts` from the shared context → **expect none visible**
    (SC-004).
-5. `changeMemberRole` → confirm an `AuditEntry` is written (FR-007).
+6. `changeMemberRole` with a stale `expectedVersion` → **expect CONFLICT error** (FR-006a); with the
+   current version → succeeds and writes an `AuditEntry` (FR-007).
+7. As sole owner, `archiveProfile` → `status: ARCHIVED`; subsequent writes are rejected (read-only),
+   history still readable (FR-007c).
 
 ### 2. Percentage-based allocation (US2, FR-011/FR-013/FR-015a)
+0. `setDeclaredIncome` for member A → income recorded; change takes effect for the NEXT period (FR-011/FR-016a).
 1. `setAllocation` percentageBp=3000 (30%) for member A → expected contribution computed deterministically.
 2. Query `remainingAllocationPercentageBp` for A across all profiles.
 3. `setAllocation` that would push A's cross-profile total over 100% → **expect rejection with remaining %**
@@ -84,3 +90,8 @@ Run these GraphQL operations (e.g., in the playground) in order. Each maps to a 
 | Reconciliation | poolTotal == Σ records (zero variance) | SC-005 |
 | History preserved | Prior period unchanged after redistribution | SC-006 |
 | AI boundary | 0 state changes from coaching path | SC-008 |
+| Invitation expiry | unanswered invite → EXPIRED after 14d | FR-002a |
+| Concurrency | stale `expectedVersion` → CONFLICT error | FR-006a |
+| Period rollover | period auto-closes; next opens with fresh snapshot | FR-016a |
+| Archival | sole-owner archive → read-only, history retained | FR-007c |
+| Money width | large balances handled without overflow | FR-024 / analysis I1 |

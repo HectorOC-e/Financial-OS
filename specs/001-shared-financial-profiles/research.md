@@ -125,8 +125,40 @@ AI boundary).
 
 ---
 
-**Outcome**: All decisions resolved; no open `NEEDS CLARIFICATION`. Note three spec-level requirement
-ambiguities flagged by the requirements-gate checklist (overpayment rule CHK029, released-vs-reassigned
-responsibility CHK038, ownership-transfer mechanics CHK037) are carried into Phase 1 with conservative
-default modeling and called out in data-model.md for confirmation during `/speckit-tasks` or a follow-up
-clarify.
+## R11. Period auto-rollover & invitation expiry (scheduled jobs)
+
+- **Decision**: Use **BullMQ repeatable jobs** (Redis) for time-driven transitions: (a) a per-profile
+  period scheduler that auto-closes a `ContributionPeriod` at `endDate` and opens the next with a fresh
+  income/plan snapshot (FR-016a); (b) an invitation-expiry sweep that transitions unanswered INVITED
+  memberships to EXPIRED at `invitedAt + 14 days` (FR-002a). Both emit domain events via the outbox.
+- **Rationale**: Deterministic, idempotent, tenant-scoped scheduling without coupling to request traffic;
+  reuses the existing Redis/BullMQ infrastructure (R4).
+- **Alternatives considered**: Cron at the OS level (rejected — not tenant-aware, harder to test);
+  compute-on-read rollover (rejected — would mutate/ recompute snapshots, violating SC-006/FR-016a).
+
+## R12. Optimistic concurrency
+
+- **Decision**: Add an integer `version` column to mutable shared records (memberships, allocations,
+  shared goals/debts/investments/budgets). Mutations accept `expectedVersion`; the repository performs a
+  conditional update (`WHERE version = expectedVersion`) and returns a CONFLICT domain error on mismatch
+  (FR-006a).
+- **Rationale**: Prevents silent lost updates on shared financial data without pessimistic locking.
+- **Alternatives considered**: Last-write-wins (rejected — silent data loss); row locks (rejected —
+  contention/UX cost for collaborative editing).
+
+## R13. Money scalar width (analysis I1)
+
+- **Decision**: Represent money as **64-bit** integers end-to-end — Prisma `BigInt`, a GraphQL `BigInt`
+  scalar (serialized as string) — never the 32-bit GraphQL `Int`.
+- **Rationale**: FR-024 forbids precision loss; 32-bit Int caps at ~$21.5M in cents and would overflow for
+  large pooled balances. 64-bit covers realistic financial magnitudes.
+- **Alternatives considered**: GraphQL `Int` (rejected — overflow risk); `Float`/string-decimal at the
+  domain layer (rejected — float banned; integers remain the domain representation).
+
+---
+
+**Outcome**: All decisions resolved; no open `NEEDS CLARIFICATION`. The previously carried ambiguities
+(overpayment CHK029, departed-member responsibility CHK038, ownership-transfer mechanics CHK037) plus the
+later clarifications (invitation lifecycle, income source, period rollover, archival, concurrency) are now
+fully specified in spec.md and reflected in data-model.md and contracts/. Analysis findings I1 (money
+scalar) and I2 (budget period) are resolved here and in the contract.

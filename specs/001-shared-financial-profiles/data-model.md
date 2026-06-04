@@ -1,8 +1,10 @@
 # Phase 1 Data Model: Shared Financial Profiles
 
-All monetary fields are **integer minor units (cents)**; percentages are **basis points (0–10000)**.
-Every tenant-scoped table carries a non-null `tenantId` and is protected by PostgreSQL RLS. All IDs are
-UUID v7. Timestamps are UTC. "Append-only" tables forbid UPDATE/DELETE at the domain layer.
+All monetary fields are **integer minor units (cents)** stored as 64-bit (`BigInt`); percentages are
+**basis points (0–10000)**. Every tenant-scoped table carries a non-null `tenantId` and is protected by
+PostgreSQL RLS. All IDs are UUID v7. Timestamps are UTC. "Append-only" tables forbid UPDATE/DELETE at the
+domain layer. Mutable shared records (memberships, allocations, shared elements) carry an integer
+`version` column for **optimistic concurrency** (FR-006a): a write against a stale version is rejected.
 
 ## Entity Overview
 
@@ -39,17 +41,24 @@ SaaS isolation boundary.
 
 ### SharedProfile
 - `id`, `tenantId`, `name`, `ownerMembershipId`, `baseCurrency`, `periodLength` (enum, default MONTHLY),
-  `createdAt`.
+  `status` (enum: ACTIVE | ARCHIVED), `archivedAt?`, `createdAt`.
 - **Rules**: exactly one owner at a time (FR-005); ownership transferable (FR-007a); `baseCurrency`
-  single per profile (assumption — mixed-currency input rejected).
+  single per profile (assumption — mixed-currency input rejected). A sole owner may **archive**
+  (soft-close) the profile (FR-007c): ARCHIVED profiles are read-only (no new contributions/allocations/
+  shared-element changes), history retained immutably, never hard-deleted.
 
 ### Membership
 Association of a User to a SharedProfile.
 - `id`, `tenantId`, `sharedProfileId`, `userId`, `role` (enum: OWNER | ADMIN | CONTRIBUTOR | VIEWER),
-  `status` (enum: INVITED | ACTIVE | LEFT), `invitedAt`, `joinedAt`, `leftAt`.
+  `status` (enum: INVITED | ACTIVE | DECLINED | EXPIRED | LEFT), `pendingOwnerNominee` (bool),
+  `declaredIncomeCents` (BigInt, current self-declared per-period income — FR-011),
+  `invitedAt`, `invitationExpiresAt`, `joinedAt`, `leftAt`, `version` (int, optimistic concurrency).
 - **Rules**: role drives capability matrix (FR-005/FR-006). Exactly one OWNER membership per profile.
   A non-owner may transition ACTIVE→LEFT anytime; OWNER must transfer ownership before leaving (FR-007a).
-  State machine: `INVITED → ACTIVE → LEFT` (and `INVITED → (declined/expired) → removed`).
+  **State machine**: `INVITED → ACTIVE | DECLINED | EXPIRED`, then `ACTIVE → LEFT` (FR-002a).
+  `invitationExpiresAt` = `invitedAt + 14 days`; an unanswered invite auto-transitions to EXPIRED.
+  DECLINED/EXPIRED grant no access. `declaredIncomeCents` is updatable; the value is snapshotted into each
+  period when it opens (FR-016a).
 
 ### Account
 A financial holding; belongs to exactly one profile (FR-010a).
@@ -79,8 +88,11 @@ A single member's percentage within a plan version.
 ### ContributionPeriod
 A recurring window (default monthly, configurable).
 - `id`, `tenantId`, `sharedProfileId`, `startDate`, `endDate`, `status` (OPEN | CLOSED),
-  `planVersionSnapshot` (the plan version applied), `createdAt`.
-- **Rules**: expected amounts are snapshotted when the period opens (R7); closed periods are immutable.
+  `planVersionSnapshot` (the plan version applied), `incomeSnapshot` (per-member declared income at open),
+  `createdAt`.
+- **Rules**: expected amounts (from plan version × per-member income) are snapshotted when the period
+  opens (R7); closed periods are immutable. A period **auto-closes** at `endDate` and the next opens
+  immediately with a fresh snapshot; income/percentage changes affect only the next period (FR-016a).
 
 ### ContributionRecord (append-only)
 An actual contribution by a member in a period.
@@ -117,8 +129,10 @@ Per-member responsibility share of a shared debt/credit card (FR-020a).
 
 ### SharedBudget
 - `id`, `tenantId`, `sharedProfileId`, `category`, `limit` (cents), `spent` (cents), `periodId`,
-  `createdAt`.
-- **Rules**: remaining = limit − spent, reflected exactly as spending recorded (FR-018).
+  `version`, `createdAt`.
+- **Rules**: remaining = limit − spent, reflected exactly as spending recorded (FR-018). A budget is
+  **scoped to a contribution period** (`periodId`); `spent` resets each period when a new budget row is
+  created for the next period (resolves analysis I2). Surfaced as `remaining` in the GraphQL contract.
 
 ---
 
@@ -160,6 +174,13 @@ Per-member responsibility share of a shared debt/credit card (FR-020a).
 | One owner; transfer before leave | FR-005, FR-007a |
 | Audit on membership/permission change | FR-007 |
 | AI never writes financial state | FR-023, SC-008 |
+| Invitation accept/decline/14-day expiry | FR-002a |
+| Per-profile self-declared income, updatable | FR-011 |
+| Period auto-rollover; forward-only changes | FR-016a |
+| Sole owner archive (read-only), no hard delete | FR-007c |
+| Optimistic concurrency (version) on mutable shared records | FR-006a |
+| Budget scoped to period; resets per period | FR-018 (I2) |
+| Money stored/served as 64-bit minor units | FR-024 (I1) |
 
 ## Carried items — RESOLVED via clarification (2026-06-04)
 

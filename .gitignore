@@ -1,0 +1,42 @@
+# --- Node / TypeScript (apps/api, packages) ---
+node_modules/
+dist/
+build/
+coverage/
+*.log
+*.tsbuildinfo
+.npm/
+.pnpm-store/
+
+# --- Environment / secrets ---
+.env
+.env.*
+!.env.example
+
+# --- Prisma ---
+apps/api/prisma/*.db
+apps/api/prisma/migrations/**/*.local.sql
+
+# --- Flutter / Dart (apps/mobile) ---
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build/
+.pub-cache/
+.pub/
+*.iml
+.idea/
+ios/Pods/
+android/.gradle/
+
+# --- Python caches (tooling/skills) ---
+__pycache__/
+*.pyc
+
+# --- Editor / OS ---
+.vscode/
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp

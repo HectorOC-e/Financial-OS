@@ -1,0 +1,19 @@
+{
+  "name": "financial-os",
+  "version": "0.1.0",
+  "private": true,
+  "description": "FinancialOS — AI-assisted financial operating system (Shared Financial Profiles).",
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@9",
+  "scripts": {
+    "api:dev": "pnpm --filter @financial-os/api start:dev",
+    "api:build": "pnpm --filter @financial-os/api build",
+    "test": "pnpm -r test",
+    "test:unit": "pnpm --filter @financial-os/api test:unit",
+    "test:contract": "pnpm --filter @financial-os/api test:contract",
+    "test:integration": "pnpm --filter @financial-os/api test:integration",
+    "lint": "pnpm -r lint"
+  }
+}

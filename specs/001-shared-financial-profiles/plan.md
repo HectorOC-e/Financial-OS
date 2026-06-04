@@ -44,9 +44,12 @@ iOS 15+ / Android 9+ (Flutter mobile client)
 recomputation deterministic and < 50ms per profile; support 10k concurrent tenant users without
 degradation (SC-002, SC-007 freshness within one query round-trip).
 
-**Constraints**: All money as integer minor units (cents); zero floating-point in financial paths;
-server-side validation authoritative; tenant isolation enforced at the data layer by default; AI pathways
-read-only; domain layer free of framework/I/O dependencies.
+**Constraints**: All money as **64-bit** integer minor units (cents; Prisma `BigInt` + GraphQL `BigInt`
+scalar — analysis I1); zero floating-point in financial paths; server-side validation authoritative;
+tenant isolation enforced at the data layer by default; AI pathways read-only; domain layer free of
+framework/I/O dependencies; **optimistic concurrency** (`version` column) on mutable shared records
+(FR-006a); **BullMQ repeatable jobs** drive period auto-rollover (FR-016a) and 14-day invitation expiry
+(FR-002a); sole-owner **archive** soft-closes a profile to read-only (FR-007c).
 
 **Scale/Scope**: Multi-tenant SaaS; tens of thousands of tenants; per profile up to ~20 members and
 hundreds of accounts/elements; 7 user stories, ~28 functional requirements, ~13 core entities.
@@ -74,6 +77,11 @@ hundreds of accounts/elements; 7 user stories, ~28 functional requirements, ~13 
 migrations ✅.
 
 **Result**: PASS — no violations. Complexity Tracking not required.
+
+**Post-design re-check (2026-06-04, after clarifications)**: Still PASS. The added mechanisms uphold the
+constitution — period rollover/invite-expiry are deterministic scheduled jobs (II), optimistic concurrency
+protects money integrity (II/VIII), archival keeps history immutable (audit/Architectural Constraints),
+64-bit money removes the precision-loss risk (II/VIII). No principle is weakened; no new violations.
 
 ## Project Structure
 
@@ -117,6 +125,7 @@ apps/
 │   │   │   ├── permissions/             # RBAC roles, guards, audit trail
 │   │   │   ├── tenancy/                 # Tenant context, RLS plumbing
 │   │   │   ├── events/                  # Outbox dispatcher, BullMQ consumers, event registry
+│   │   │   ├── scheduling/              # BullMQ repeatable jobs: period rollover (FR-016a), invite expiry (FR-002a)
 │   │   │   └── ai-coaching/             # READ-ONLY OpenRouter integration (no write deps)
 │   │   ├── common/                      # Money lib, Result types, error mapping, logging
 │   │   └── main.ts

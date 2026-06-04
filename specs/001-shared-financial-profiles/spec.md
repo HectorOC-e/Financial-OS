@@ -22,6 +22,11 @@
 - Q: How does ownership transfer take effect? → A: The owner nominates an existing ACTIVE member who must explicitly accept; ownership transfers only on acceptance, the current owner remains owner until then, and both nomination and acceptance are audited.
 - Q: How are residual cents allocated when a percentage split does not divide evenly? → A: Largest-remainder method — floor each share, then distribute leftover cents to the members with the largest fractional remainders, ties broken by stable membership ID order.
 - Q: What is the freshness bound for "at any time" contribution-standing visibility (SC-007)? → A: Standings and pool totals MUST reflect a recorded contribution within 5 seconds.
+- Q: How do shared-profile invitations behave (accept/decline/expiry)? → A: An invitee may accept or explicitly decline; an unanswered invitation auto-expires 14 days after it is sent.
+- Q: Where does a member's "declared income" come from? → A: Each member self-declares a per-period income amount per shared profile and can update it; the latest declared value drives expected contributions. No external payroll integration in this feature.
+- Q: How do contribution periods roll over, and when do income/percentage changes take effect? → A: A period auto-closes at the end of its window and the next opens immediately with a fresh expected-amount snapshot; income and percentage changes apply to the NEXT period only — the current period's snapshot is immutable.
+- Q: What happens when the sole owner wants to leave / how does a profile end? → A: The sole owner can archive (soft-close) the profile; it becomes read-only, future contributions and shared-element changes are frozen, and all history is retained immutably. There is no hard delete.
+- Q: How are concurrent edits to the same shared element/allocation resolved? → A: Optimistic concurrency — writes carry the record version; a write against a stale version is rejected with a conflict error, and the user refreshes and retries (no silent lost updates).
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -223,7 +228,10 @@ no analysis pathway can write to financial state.
   equals the pooled total with no lost or phantom fractions?
 - What happens when a member is removed while having recorded contributions in the current period?
   (Their historical contributions remain; future expected contributions cease.)
-- How does the system handle simultaneous edits to the same shared element by two members?
+- What happens when the owner is the only member and wants to leave? (The owner archives/soft-closes the
+  profile; it becomes read-only with history retained immutably; no hard delete. See FR-007c.)
+- How does the system handle simultaneous edits to the same shared element by two members? (Optimistic
+  concurrency: the stale write is rejected with a conflict error; the member refreshes and retries. See FR-006a.)
 - What happens when a shared credit card or debt is overpaid? (The overpayment is rejected; a member may
   pay at most the exact outstanding balance, so the balance never goes below zero. See FR-020b.)
 
@@ -235,6 +243,10 @@ no analysis pathway can write to financial state.
 
 - **FR-001**: Users MUST be able to own a personal financial profile that is private to them by default.
 - **FR-002**: Users MUST be able to create shared financial profiles and invite other users to join them.
+- **FR-002a**: An invited user MUST be able to accept or explicitly decline a shared-profile invitation.
+  An invitation that is neither accepted nor declined MUST automatically expire 14 days after it is sent.
+  Declined and expired invitations MUST NOT grant any access, and the invitation outcome MUST be recorded
+  in the audit trail. Membership status therefore follows INVITED → ACTIVE | DECLINED | EXPIRED → (LEFT).
 - **FR-003**: A user MUST be able to belong to multiple shared profiles simultaneously while retaining
   one personal profile.
 - **FR-004**: The system MUST keep each member's personal (non-shared) accounts isolated and invisible to
@@ -266,6 +278,11 @@ no analysis pathway can write to financial state.
   existing ACTIVE member, and ownership transfers only when that member explicitly accepts. The current
   owner retains ownership until acceptance. Both the nomination and the acceptance MUST be recorded in the
   audit trail. A nomination MUST target an ACTIVE member (not INVITED or LEFT).
+- **FR-007c**: When the owner is the only active member, the owner MUST be able to archive (soft-close)
+  the shared profile instead of transferring ownership. An archived profile MUST become read-only: future
+  contributions, allocations, and shared-element changes are frozen, while all historical records are
+  retained immutably and remain viewable. The system MUST NOT hard-delete a shared profile. Archiving MUST
+  be recorded in the audit trail.
 
 #### Accounts & Financial Elements
 
@@ -281,8 +298,10 @@ no analysis pathway can write to financial state.
 
 #### Income Distribution & Contributions
 
-- **FR-011**: Members MUST be able to declare an income figure and allocate a percentage of that income
-  as their contribution to a shared profile.
+- **FR-011**: Each member MUST self-declare a per-period income amount for each shared profile they
+  belong to and MUST be able to update it; the latest declared value drives expected-contribution
+  computation. Members allocate a percentage of that declared income as their contribution. Income is
+  member-entered (no external payroll integration in this feature).
 - **FR-012**: The system MUST compute each member's expected contribution amount deterministically from
   their declared income and percentage, producing identical results for identical inputs.
 - **FR-013**: The system MUST reject contribution percentages outside the valid range (below 0% or
@@ -301,6 +320,10 @@ no analysis pathway can write to financial state.
 
 #### Contribution Tracking & Budgets
 
+- **FR-016a**: A contribution period MUST auto-close at the end of its configured window, and the next
+  period MUST open immediately with a fresh snapshot of expected amounts. Income and percentage changes
+  MUST take effect for the NEXT period only; the current (open) period's expected-amount snapshot MUST
+  remain immutable, and closed periods MUST never be recomputed.
 - **FR-017**: The system MUST track each member's actual contributions and compare them against their
   expected contributions for each period, reporting variance (on track, ahead, behind by an exact amount).
 - **FR-018**: The system MUST allow members to define and manage shared budgets, and MUST reflect the
@@ -334,6 +357,10 @@ no analysis pathway can write to financial state.
   occur only through permitted, validated human-initiated actions.
 - **FR-024**: Monetary values MUST be represented and computed without precision loss; balances of
   debts and credit cards MUST NOT go below zero through normal operations.
+- **FR-006a**: The system MUST resolve concurrent edits to the same shared element, allocation, or
+  membership using optimistic concurrency: each such record carries a version, and a write submitted
+  against a stale version MUST be rejected with a conflict error (no silent lost updates). The member may
+  refresh and retry.
 - **FR-024a**: When a percentage-based split (contributions, debt responsibility, or any pooled
   allocation) does not divide evenly into whole minor units, the system MUST allocate residual units
   using the largest-remainder method: floor each member's share, then distribute the leftover units one
@@ -391,11 +418,11 @@ no analysis pathway can write to financial state.
 
 - A user has exactly one personal profile; "multiple profiles" refers to one personal profile plus any
   number of shared profiles the user participates in.
-- Income figures used for percentage allocation are values associated with a member within a shared
-  profile (declared or derived) rather than a global system-of-record salary feed; the precise source
-  can be refined during planning.
-- Contribution periods are recurring time windows (e.g., monthly); the exact period length is
-  configurable per shared profile and defaults to a standard monthly cycle.
+- Income figures used for percentage allocation are self-declared by each member per shared profile and
+  updatable (see FR-011); there is no global system-of-record salary feed or external payroll integration.
+- Contribution periods are recurring time windows; the exact period length is configurable per shared
+  profile and defaults to a standard monthly cycle. Periods auto-roll at window end and income/percentage
+  changes are forward-only (see FR-016a).
 - "Isolated permissions" means permission grants are scoped per shared profile and do not leak across
   profiles a user belongs to.
 - All members of a shared profile transact in a single shared currency for that profile; multi-currency

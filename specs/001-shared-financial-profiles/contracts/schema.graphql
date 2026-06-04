@@ -1,0 +1,125 @@
+# GraphQL Contract — Shared Financial Profiles
+# Source of truth for resolvers (code-first export) and Flutter codegen.
+# Schema version: 1.0.0. Money fields are integer minor units (cents). Percentages are basis points.
+
+scalar DateTime
+scalar UUID
+
+# ---------- Enums ----------
+enum ProfileType { PERSONAL SHARED }
+enum MemberRole { OWNER ADMIN CONTRIBUTOR VIEWER }
+enum MembershipStatus { INVITED ACTIVE LEFT }
+enum AccountType { WALLET ACCOUNT INVESTMENT EMERGENCY_FUND CREDIT_CARD DEBT }
+enum SharedDebtKind { DEBT CREDIT_CARD }
+enum PeriodLength { WEEKLY MONTHLY QUARTERLY }
+enum PeriodStatus { OPEN CLOSED }
+enum StandingState { ON_TRACK AHEAD BEHIND }
+
+# ---------- Core types ----------
+type User { id: UUID!, displayName: String!, personalProfile: PersonalProfile! }
+
+type PersonalProfile { id: UUID!, accounts: [Account!]! }
+
+type SharedProfile {
+  id: UUID!
+  name: String!
+  baseCurrency: String!
+  periodLength: PeriodLength!
+  owner: Membership!
+  members: [Membership!]!          # scoped by caller permission
+  accounts: [Account!]!
+  currentPlan: ContributionPlan!
+  currentPeriod: ContributionPeriod
+  sharedGoals: [SharedGoal!]!
+  sharedDebts: [SharedDebt!]!
+  sharedInvestments: [SharedInvestment!]!
+  sharedBudgets: [SharedBudget!]!
+  poolTotal(periodId: UUID): Money!  # emergent sum; derived, cached
+}
+
+type Membership {
+  id: UUID!
+  user: User!
+  role: MemberRole!
+  status: MembershipStatus!
+  allocationPercentageBp: Int        # current plan allocation
+  standing(periodId: UUID): ContributionStanding
+}
+
+type Account {
+  id: UUID!
+  profileType: ProfileType!
+  type: AccountType!
+  name: String!
+  balance: Money!
+  currency: String!
+}
+
+type Money { amountCents: Int!, currency: String! }
+
+# ---------- Contribution domain ----------
+type ContributionPlan { id: UUID!, version: Int!, effectiveFromPeriodId: UUID, allocations: [ContributionAllocation!]! }
+type ContributionAllocation { id: UUID!, membership: Membership!, percentageBp: Int! }
+type ContributionPeriod { id: UUID!, startDate: DateTime!, endDate: DateTime!, status: PeriodStatus! }
+type ContributionRecord { id: UUID!, membership: Membership!, amount: Money!, recordedAt: DateTime! }
+type ContributionStanding { expected: Money!, actual: Money!, variance: Money!, state: StandingState! }
+
+# ---------- Shared elements ----------
+type SharedGoal { id: UUID!, name: String!, targetAmount: Money!, fundedAmount: Money! }
+type SharedDebt {
+  id: UUID!, kind: SharedDebtKind!, name: String!, outstandingBalance: Money!
+  responsibilities: [DebtResponsibility!]!
+}
+type DebtResponsibility { id: UUID!, membership: Membership!, percentageBp: Int! }
+type SharedInvestment { id: UUID!, name: String!, currentValue: Money!, valueAsOf: DateTime! }
+type SharedBudget { id: UUID!, category: String!, limit: Money!, spent: Money!, remaining: Money! }
+
+# ---------- AI coaching (READ-ONLY) ----------
+type CoachingInsight { summary: String!, suggestions: [CoachingSuggestion!]! }
+# A suggestion is advisory only; applying it requires a normal validated mutation by a permitted human.
+type CoachingSuggestion { title: String!, detail: String!, suggestedMutation: String }
+
+# ---------- Queries ----------
+type Query {
+  me: User!
+  sharedProfile(id: UUID!): SharedProfile          # permission-scoped
+  myMemberships: [Membership!]!
+  remainingAllocationPercentageBp: Int!            # member's available % across all profiles (FR-015a)
+  coachingInsights(sharedProfileId: UUID!): CoachingInsight!   # read-only; never mutates state
+}
+
+# ---------- Mutation inputs ----------
+input CreateSharedProfileInput { name: String!, baseCurrency: String!, periodLength: PeriodLength = MONTHLY }
+input InviteMemberInput { sharedProfileId: UUID!, userId: UUID!, role: MemberRole! }
+input SetAllocationInput { sharedProfileId: UUID!, membershipId: UUID!, percentageBp: Int! }
+input RecordContributionInput { sharedProfileId: UUID!, membershipId: UUID!, amountCents: Int!, sourceAccountId: UUID }
+input FundGoalInput { sharedGoalId: UUID!, amountCents: Int! }
+input PaySharedDebtInput { sharedDebtId: UUID!, amountCents: Int! }
+input SetDebtResponsibilityInput { sharedDebtId: UUID!, membershipId: UUID!, percentageBp: Int! }
+input NominateOwnerInput { sharedProfileId: UUID!, nomineeMembershipId: UUID! }   # nominee must be ACTIVE
+
+# ---------- Mutations (all server-side validated; money recomputed authoritatively) ----------
+type Mutation {
+  createSharedProfile(input: CreateSharedProfileInput!): SharedProfile!
+  inviteMember(input: InviteMemberInput!): Membership!
+  acceptInvitation(membershipId: UUID!): Membership!
+  changeMemberRole(membershipId: UUID!, role: MemberRole!): Membership!
+  leaveProfile(membershipId: UUID!): Membership!            # owner must transfer first (FR-007a)
+  nominateOwner(input: NominateOwnerInput!): Membership!    # owner nominates an ACTIVE member (FR-007b)
+  acceptOwnership(sharedProfileId: UUID!): SharedProfile!   # nominee accepts; transfer completes (FR-007b)
+
+  setAllocation(input: SetAllocationInput!): ContributionPlan!   # rejects if cross-profile > 100% (FR-015a)
+  redistribute(sharedProfileId: UUID!, allocations: [SetAllocationInput!]!): ContributionPlan!
+  recordContribution(input: RecordContributionInput!): ContributionRecord!
+
+  createSharedGoal(sharedProfileId: UUID!, name: String!, targetAmountCents: Int!): SharedGoal!
+  fundGoal(input: FundGoalInput!): SharedGoal!
+  paySharedDebt(input: PaySharedDebtInput!): SharedDebt!        # rejects overpayment (CHK029 default)
+  setDebtResponsibility(input: SetDebtResponsibilityInput!): SharedDebt!  # set must sum to 100%
+}
+
+# ---------- Subscriptions (live standings / pool) ----------
+type Subscription {
+  contributionStandingChanged(sharedProfileId: UUID!): ContributionStanding!
+  poolTotalChanged(sharedProfileId: UUID!): Money!
+}

@@ -1,7 +1,15 @@
-// FinancialOS — Prisma schema (datasource + generator only at Phase 1).
-// The full entity model (Tenant, User, Profiles, Membership, Account, Contribution*,
-// Shared*, AuditEntry, OutboxEvent) with BigInt money, `version` columns, and RLS is
-// added in Phase 2 (tasks.md T014–T016) per data-model.md.
+// FinancialOS — Prisma schema (data-model.md, tasks.md T014).
+//
+// Conventions:
+//  - All monetary fields are 64-bit integer minor units (cents) → Prisma `BigInt` (analysis I1, FR-024).
+//  - Percentages are integer basis points (0–10000).
+//  - Every tenant-scoped table carries a non-null `tenantId` and is protected by PostgreSQL RLS
+//    (migration in T016). `tenantId` is indexed on every table.
+//  - Mutable shared records carry an integer `version` column for optimistic concurrency (FR-006a / R12).
+//  - "Append-only" tables (ContributionRecord, AuditEntry, OutboxEvent) forbid UPDATE/DELETE at the
+//    domain layer (not enforceable in the schema itself).
+//  - IDs are UUIDs; v7 ordering is applied at the application layer.
+//  - NO business logic lives in migrations (Architectural Constraints).
 
 generator client {
   provider = "prisma-client-js"
@@ -10,4 +18,391 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum MemberRole {
+  OWNER
+  ADMIN
+  CONTRIBUTOR
+  VIEWER
+}
+
+enum MembershipStatus {
+  INVITED
+  ACTIVE
+  DECLINED
+  EXPIRED
+  LEFT
+}
+
+enum ProfileStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum ProfileType {
+  PERSONAL
+  SHARED
+}
+
+enum AccountType {
+  WALLET
+  ACCOUNT
+  INVESTMENT
+  EMERGENCY_FUND
+  CREDIT_CARD
+  DEBT
+}
+
+enum PeriodLength {
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+enum PeriodStatus {
+  OPEN
+  CLOSED
+}
+
+enum SharedDebtKind {
+  DEBT
+  CREDIT_CARD
+}
+
+enum GoalStatus {
+  ACTIVE
+  ACHIEVED
+  ARCHIVED
+}
+
+// ---------------------------------------------------------------------------
+// Core entities
+// ---------------------------------------------------------------------------
+
+model Tenant {
+  id        String   @id @default(uuid())
+  name      String
+  settings  Json     @default("{}") // default period length, base currency, etc.
+  createdAt DateTime @default(now())
+
+  users                   User[]
+  personalProfiles        PersonalProfile[]
+  sharedProfiles          SharedProfile[]
+  memberships             Membership[]
+  accounts                Account[]
+  contributionPlans       ContributionPlan[]
+  contributionAllocations ContributionAllocation[]
+  contributionPeriods     ContributionPeriod[]
+  contributionRecords     ContributionRecord[]
+  sharedGoals             SharedGoal[]
+  sharedDebts             SharedDebt[]
+  debtResponsibilities    DebtResponsibility[]
+  sharedInvestments       SharedInvestment[]
+  sharedBudgets           SharedBudget[]
+  auditEntries            AuditEntry[]
+  outboxEvents            OutboxEvent[]
+}
+
+model User {
+  id          String   @id @default(uuid())
+  tenantId    String
+  authSubject String // external identity reference
+  displayName String
+  createdAt   DateTime @default(now())
+
+  tenant          Tenant           @relation(fields: [tenantId], references: [id])
+  personalProfile PersonalProfile?
+  memberships     Membership[]
+
+  @@unique([tenantId, authSubject])
+  @@index([tenantId])
+}
+
+model PersonalProfile {
+  id        String   @id @default(uuid())
+  tenantId  String
+  userId    String   @unique
+  createdAt DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@index([tenantId])
+}
+
+model SharedProfile {
+  id                String        @id @default(uuid())
+  tenantId          String
+  name              String
+  // Current owner membership (scalar ref; the formal relation is `memberships` below to avoid a cycle).
+  ownerMembershipId String?
+  baseCurrency      String // ISO 4217
+  periodLength      PeriodLength  @default(MONTHLY)
+  status            ProfileStatus @default(ACTIVE)
+  archivedAt        DateTime?
+  createdAt         DateTime      @default(now())
+
+  tenant              Tenant               @relation(fields: [tenantId], references: [id])
+  memberships         Membership[]
+  contributionPlans   ContributionPlan[]
+  contributionPeriods ContributionPeriod[]
+  contributionRecords ContributionRecord[]
+  sharedGoals         SharedGoal[]
+  sharedDebts         SharedDebt[]
+  sharedInvestments   SharedInvestment[]
+  sharedBudgets       SharedBudget[]
+  auditEntries        AuditEntry[]
+
+  @@index([tenantId])
+}
+
+model Membership {
+  id                  String           @id @default(uuid())
+  tenantId            String
+  sharedProfileId     String
+  userId              String
+  role                MemberRole       @default(VIEWER)
+  status              MembershipStatus @default(INVITED)
+  pendingOwnerNominee Boolean          @default(false)
+  declaredIncomeCents BigInt           @default(0) // current self-declared per-period income (FR-011)
+  invitedAt           DateTime         @default(now())
+  invitationExpiresAt DateTime // invitedAt + 14 days (FR-002a)
+  joinedAt            DateTime?
+  leftAt              DateTime?
+  version             Int              @default(0) // optimistic concurrency (FR-006a)
+
+  tenant               Tenant                   @relation(fields: [tenantId], references: [id])
+  sharedProfile        SharedProfile            @relation(fields: [sharedProfileId], references: [id])
+  user                 User                     @relation(fields: [userId], references: [id])
+  allocations          ContributionAllocation[]
+  records              ContributionRecord[]
+  debtResponsibilities DebtResponsibility[]
+
+  @@unique([sharedProfileId, userId])
+  @@index([tenantId])
+  @@index([status, invitationExpiresAt]) // invitation-expiry sweep (T036)
+}
+
+model Account {
+  id          String      @id @default(uuid())
+  tenantId    String
+  profileType ProfileType
+  profileId   String // PersonalProfile.id or SharedProfile.id depending on profileType (FR-010a)
+  type        AccountType
+  name        String
+  balance     BigInt      @default(0) // integer cents
+  currency    String
+  createdAt   DateTime    @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([profileType, profileId])
+}
+
+// ---------------------------------------------------------------------------
+// Contribution domain
+// ---------------------------------------------------------------------------
+
+model ContributionPlan {
+  id                    String   @id @default(uuid())
+  tenantId              String
+  sharedProfileId       String
+  version               Int // incrementing plan version (redistribution → new version, R7/SC-006)
+  effectiveFromPeriodId String?
+  createdBy             String // membershipId
+  createdAt             DateTime @default(now())
+
+  tenant        Tenant                   @relation(fields: [tenantId], references: [id])
+  sharedProfile SharedProfile            @relation(fields: [sharedProfileId], references: [id])
+  allocations   ContributionAllocation[]
+
+  @@unique([sharedProfileId, version])
+  @@index([tenantId])
+}
+
+model ContributionAllocation {
+  id                 String @id @default(uuid())
+  tenantId           String
+  contributionPlanId String
+  membershipId       String
+  percentageBp       Int // 0–10000 (FR-013)
+  version            Int    @default(0) // optimistic concurrency (FR-006a)
+
+  tenant           Tenant           @relation(fields: [tenantId], references: [id])
+  contributionPlan ContributionPlan @relation(fields: [contributionPlanId], references: [id])
+  membership       Membership       @relation(fields: [membershipId], references: [id])
+
+  @@unique([contributionPlanId, membershipId])
+  @@index([tenantId])
+}
+
+model ContributionPeriod {
+  id                  String       @id @default(uuid())
+  tenantId            String
+  sharedProfileId     String
+  startDate           DateTime
+  endDate             DateTime
+  status              PeriodStatus @default(OPEN)
+  planVersionSnapshot Int // plan version applied for this period (R7)
+  incomeSnapshot      Json         @default("{}") // { membershipId: declaredIncomeCents } at open (FR-016a)
+  createdAt           DateTime     @default(now())
+
+  tenant        Tenant               @relation(fields: [tenantId], references: [id])
+  sharedProfile SharedProfile        @relation(fields: [sharedProfileId], references: [id])
+  records       ContributionRecord[]
+
+  @@index([tenantId])
+  @@index([status, endDate]) // period auto-rollover sweep (T058)
+}
+
+model ContributionRecord {
+  id              String   @id @default(uuid())
+  tenantId        String
+  sharedProfileId String
+  periodId        String
+  membershipId    String
+  amount          BigInt // integer cents — append-only
+  recordedAt      DateTime @default(now())
+  sourceAccountId String? // optional personal account contributed from
+
+  tenant        Tenant             @relation(fields: [tenantId], references: [id])
+  sharedProfile SharedProfile      @relation(fields: [sharedProfileId], references: [id])
+  period        ContributionPeriod @relation(fields: [periodId], references: [id])
+  membership    Membership         @relation(fields: [membershipId], references: [id])
+
+  @@index([tenantId])
+  @@index([periodId])
+}
+
+// ---------------------------------------------------------------------------
+// Shared elements
+// ---------------------------------------------------------------------------
+
+model SharedGoal {
+  id              String     @id @default(uuid())
+  tenantId        String
+  sharedProfileId String
+  name            String
+  targetAmount    BigInt // integer cents
+  fundedAmount    BigInt     @default(0)
+  status          GoalStatus @default(ACTIVE)
+  version         Int        @default(0)
+  createdAt       DateTime   @default(now())
+
+  tenant        Tenant        @relation(fields: [tenantId], references: [id])
+  sharedProfile SharedProfile @relation(fields: [sharedProfileId], references: [id])
+
+  @@index([tenantId])
+}
+
+model SharedDebt {
+  id                 String         @id @default(uuid())
+  tenantId           String
+  sharedProfileId    String
+  kind               SharedDebtKind @default(DEBT)
+  name               String
+  outstandingBalance BigInt // integer cents; never below zero (FR-024)
+  version            Int            @default(0)
+  createdAt          DateTime       @default(now())
+
+  tenant           Tenant               @relation(fields: [tenantId], references: [id])
+  sharedProfile    SharedProfile        @relation(fields: [sharedProfileId], references: [id])
+  responsibilities DebtResponsibility[]
+
+  @@index([tenantId])
+}
+
+model DebtResponsibility {
+  id           String @id @default(uuid())
+  tenantId     String
+  sharedDebtId String
+  membershipId String
+  percentageBp Int // shares for one debt MUST sum to 10000 (FR-020a)
+  version      Int    @default(0)
+
+  tenant     Tenant     @relation(fields: [tenantId], references: [id])
+  sharedDebt SharedDebt @relation(fields: [sharedDebtId], references: [id])
+  membership Membership @relation(fields: [membershipId], references: [id])
+
+  @@unique([sharedDebtId, membershipId])
+  @@index([tenantId])
+}
+
+model SharedInvestment {
+  id              String   @id @default(uuid())
+  tenantId        String
+  sharedProfileId String
+  name            String
+  currentValue    BigInt // integer cents
+  valueAsOf       DateTime @default(now())
+  version         Int      @default(0)
+  createdAt       DateTime @default(now())
+
+  tenant        Tenant        @relation(fields: [tenantId], references: [id])
+  sharedProfile SharedProfile @relation(fields: [sharedProfileId], references: [id])
+
+  @@index([tenantId])
+}
+
+model SharedBudget {
+  id              String   @id @default(uuid())
+  tenantId        String
+  sharedProfileId String
+  category        String
+  limit           BigInt // integer cents
+  spent           BigInt   @default(0)
+  periodId        String // budget is scoped to a contribution period (analysis I2 / FR-018)
+  version         Int      @default(0)
+  createdAt       DateTime @default(now())
+
+  tenant        Tenant        @relation(fields: [tenantId], references: [id])
+  sharedProfile SharedProfile @relation(fields: [sharedProfileId], references: [id])
+
+  @@unique([sharedProfileId, periodId, category])
+  @@index([tenantId])
+}
+
+// ---------------------------------------------------------------------------
+// Governance & infrastructure
+// ---------------------------------------------------------------------------
+
+model AuditEntry {
+  id                String   @id @default(uuid())
+  tenantId          String
+  sharedProfileId   String?
+  actorMembershipId String?
+  action            String
+  beforeValue       Json?
+  afterValue        Json?
+  occurredAt        DateTime @default(now())
+
+  tenant        Tenant         @relation(fields: [tenantId], references: [id])
+  sharedProfile SharedProfile? @relation(fields: [sharedProfileId], references: [id])
+
+  @@index([tenantId])
+  @@index([sharedProfileId])
+}
+
+model OutboxEvent {
+  id            String    @id @default(uuid())
+  tenantId      String
+  aggregateType String
+  aggregateId   String
+  eventType     String
+  schemaVersion Int       @default(1)
+  payload       Json
+  occurredAt    DateTime  @default(now())
+  dispatchedAt  DateTime?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([dispatchedAt]) // dispatcher polls undispatched rows
 }

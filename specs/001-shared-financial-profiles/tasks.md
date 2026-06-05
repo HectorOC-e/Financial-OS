@@ -46,35 +46,35 @@ archival (FR-007c); and analysis fixes: 64-bit `BigInt` money (I1), period-scope
 
 ### Money & determinism primitives (constitution Principle II — test-first)
 
-- [ ] T009 Write failing unit tests for `Money` value object (64-bit integer-cents arithmetic, same-currency guard, no float, large-value/no-overflow — FR-024/analysis I1) in `apps/api/test/unit/money.spec.ts`
-- [ ] T010 Implement `Money` value object (`bigint` internally) to pass tests in `apps/api/src/common/money/money.ts`
-- [ ] T011 Write failing unit tests for the **largest-remainder allocator** (floor shares, residual to largest remainders, stable membership-ID tie-break, exact reconciliation — FR-024a) in `apps/api/test/unit/largest-remainder.spec.ts`
-- [ ] T012 Implement `Percentage` (basis points) + `allocateByLargestRemainder()` to pass tests in `apps/api/src/common/money/percentage.ts`
-- [ ] T013 [P] Implement shared `Result`/domain-error types (including `CONFLICT` for optimistic concurrency and `FORBIDDEN`) + GraphQL error mapping in `apps/api/src/common/errors/`
+- [X] T009 Write failing unit tests for `Money` value object (64-bit integer-cents arithmetic, same-currency guard, no float, large-value/no-overflow — FR-024/analysis I1) in `apps/api/test/unit/money.spec.ts`
+- [X] T010 Implement `Money` value object (`bigint` internally) to pass tests in `apps/api/src/common/money/money.ts`
+- [X] T011 Write failing unit tests for the **largest-remainder allocator** (floor shares, residual to largest remainders, stable membership-ID tie-break, exact reconciliation — FR-024a) in `apps/api/test/unit/largest-remainder.spec.ts`
+- [X] T012 Implement `Percentage` (basis points) + `allocateByLargestRemainder()` to pass tests in `apps/api/src/common/money/percentage.ts`
+- [X] T013 [P] Implement shared `Result`/domain-error types (including `CONFLICT` for optimistic concurrency and `FORBIDDEN`) + GraphQL error mapping in `apps/api/src/common/errors/`
 
 ### Persistence, tenancy, concurrency, eventing, scheduling (blocking)
 
-- [ ] T014 Define full Prisma schema per data-model.md — all entities with `tenantId`, money as `BigInt`, `version` columns on mutable shared records (Membership/allocations/shared elements), Membership status (INVITED/ACTIVE/DECLINED/EXPIRED/LEFT) + `invitationExpiresAt` + `declaredIncomeCents`, SharedProfile `status` + `archivedAt`, ContributionPeriod `incomeSnapshot`, SharedBudget `periodId` — in `apps/api/prisma/schema.prisma`
-- [ ] T015 Generate initial migration (schema only, NO business logic) in `apps/api/prisma/migrations/`
-- [ ] T016 Add PostgreSQL RLS policies for every tenant-scoped table keyed on `app.tenant_id` GUC (`apps/api/prisma/migrations/` rls migration)
-- [ ] T017 Implement `TenancyModule` (derive tenant, Prisma middleware/`$transaction` GUC setter, default-deny cross-tenant) in `apps/api/src/modules/tenancy/`
-- [ ] T018 Write failing integration test: tenant B cannot read tenant A rows (RLS) in `apps/api/test/integration/rls-isolation.spec.ts`
-- [ ] T019 [P] Write failing unit/integration tests for the **optimistic-concurrency repository helper** (conditional `WHERE version = expectedVersion`, CONFLICT on mismatch — FR-006a) in `apps/api/test/unit/optimistic-concurrency.spec.ts`
-- [ ] T020 Implement optimistic-concurrency repository base helper (version check + increment) in `apps/api/src/common/persistence/versioned-repository.ts`
-- [ ] T021 Implement transactional **outbox** (same-transaction writer, versioned envelope `schemaVersion`/`tenantId`/`aggregateId`/`occurredAt`) in `apps/api/src/modules/events/outbox/`
-- [ ] T022 Implement outbox dispatcher → BullMQ (Redis) relay with idempotency keys + tenant-context propagation in `apps/api/src/modules/events/dispatcher/`
-- [ ] T023 [P] Implement event registry/base consumer (`eventId` idempotency, replay safety) in `apps/api/src/modules/events/registry/`
-- [ ] T024 Implement **scheduling module** with BullMQ repeatable jobs infrastructure (tenant-aware, idempotent) in `apps/api/src/modules/scheduling/` (hosts period-rollover + invitation-expiry jobs added later)
+- [X] T014 Define full Prisma schema per data-model.md — all entities with `tenantId`, money as `BigInt`, `version` columns on mutable shared records (Membership/allocations/shared elements), Membership status (INVITED/ACTIVE/DECLINED/EXPIRED/LEFT) + `invitationExpiresAt` + `declaredIncomeCents`, SharedProfile `status` + `archivedAt`, ContributionPeriod `incomeSnapshot`, SharedBudget `periodId` — in `apps/api/prisma/schema.prisma`
+- [X] T015 Generate initial migration (schema only, NO business logic) in `apps/api/prisma/migrations/`
+- [X] T016 Add PostgreSQL RLS policies for every tenant-scoped table keyed on `app.tenant_id` GUC (`apps/api/prisma/migrations/` rls migration)
+- [X] T017 Implement `TenancyModule` (derive tenant, Prisma middleware/`$transaction` GUC setter, default-deny cross-tenant) in `apps/api/src/modules/tenancy/`
+- [X] T018 Write failing integration test: tenant B cannot read tenant A rows (RLS) in `apps/api/test/integration/rls-isolation.spec.ts`
+- [X] T019 [P] Write failing unit/integration tests for the **optimistic-concurrency repository helper** (conditional `WHERE version = expectedVersion`, CONFLICT on mismatch — FR-006a) in `apps/api/test/unit/optimistic-concurrency.spec.ts`
+- [X] T020 Implement optimistic-concurrency repository base helper (version check + increment) in `apps/api/src/common/persistence/versioned-repository.ts`
+- [X] T021 Implement transactional **outbox** (same-transaction writer, versioned envelope `schemaVersion`/`tenantId`/`aggregateId`/`occurredAt`) in `apps/api/src/modules/events/outbox/`
+- [X] T022 Implement outbox dispatcher → BullMQ (Redis) relay with idempotency keys + tenant-context propagation in `apps/api/src/modules/events/dispatcher/`
+- [X] T023 [P] Implement event registry/base consumer (`eventId` idempotency, replay safety) in `apps/api/src/modules/events/registry/`
+- [X] T024 Implement **scheduling module** with BullMQ repeatable jobs infrastructure (tenant-aware, idempotent) in `apps/api/src/modules/scheduling/` (hosts period-rollover + invitation-expiry jobs added later)
 
 ### Permissions, audit, caching, GraphQL base (blocking)
 
-- [ ] T025 Implement RBAC: `MemberRole` enum + explicit **action→role capability matrix** (Owner/Admin/Contributor/Viewer) in `apps/api/src/modules/permissions/capability-matrix.ts`
-- [ ] T026 Implement `PermissionsGuard` (resolves role, enforces matrix, rejects with no state change — FR-006) in `apps/api/src/modules/permissions/permissions.guard.ts`
-- [ ] T027 [P] Implement immutable `AuditEntry` writer + audit consumer (actor, timestamp, before/after) in `apps/api/src/modules/permissions/audit/`
-- [ ] T028 [P] Implement Redis cache module + per-request DataLoader with event-driven invalidation hooks (R8) in `apps/api/src/common/cache/`
-- [ ] T029 Implement GraphQL request context (principal + tenant + membership), base scalars `UUID`/`DateTime`/`BigInt` and `Money` type in `apps/api/src/common/graphql/`
-- [ ] T030 [P] Implement reusable **analytics domain service** seam (single source for contribution/standing/pool computations — Principle X) in `apps/api/src/modules/contributions/domain/analytics/`
-- [ ] T031 [P] Generate Flutter GraphQL client codegen (incl. BigInt-as-string mapping) against `packages/contracts/schema.graphql` in `apps/mobile/lib/graphql/`
+- [X] T025 Implement RBAC: `MemberRole` enum + explicit **action→role capability matrix** (Owner/Admin/Contributor/Viewer) in `apps/api/src/modules/permissions/capability-matrix.ts`
+- [X] T026 Implement `PermissionsGuard` (resolves role, enforces matrix, rejects with no state change — FR-006) in `apps/api/src/modules/permissions/permissions.guard.ts`
+- [X] T027 [P] Implement immutable `AuditEntry` writer + audit consumer (actor, timestamp, before/after) in `apps/api/src/modules/permissions/audit/`
+- [X] T028 [P] Implement Redis cache module + per-request DataLoader with event-driven invalidation hooks (R8) in `apps/api/src/common/cache/`
+- [X] T029 Implement GraphQL request context (principal + tenant + membership), base scalars `UUID`/`DateTime`/`BigInt` and `Money` type in `apps/api/src/common/graphql/`
+- [X] T030 [P] Implement reusable **analytics domain service** seam (single source for contribution/standing/pool computations — Principle X) in `apps/api/src/modules/contributions/domain/analytics/`
+- [X] T031 [P] Generate Flutter GraphQL client codegen (incl. BigInt-as-string mapping) against `packages/contracts/schema.graphql` in `apps/mobile/lib/graphql/`
 
 **Checkpoint**: Foundation ready — tenancy/RLS, money primitives, concurrency helper, outbox/events, scheduling, permissions, caching, GraphQL base in place.
 

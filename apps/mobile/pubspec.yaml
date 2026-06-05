@@ -23,6 +23,8 @@ dev_dependencies:
   freezed: ^2.5.7
   json_serializable: ^6.8.0
   mocktail: ^1.0.4
+  # GraphQL client codegen against packages/contracts/schema.graphql (T031).
+  graphql_codegen: ^0.14.0
 
 flutter:
   uses-material-design: true

@@ -1,0 +1,22 @@
+# Flutter GraphQL codegen config (T031).
+#
+# Generates type-safe operations from .graphql documents under lib/graphql/ against the shared
+# contract SDL (packages/contracts/schema.graphql — single source of truth). The 64-bit money
+# `BigInt` scalar is mapped to Dart `String` to preserve precision end-to-end (analysis I1 / FR-024);
+# parse to BigInt at the edge of the presentation layer only for display.
+#
+# Run: `flutter pub get && dart run build_runner build --delete-conflicting-outputs`
+targets:
+  $default:
+    builders:
+      graphql_codegen:
+        options:
+          schema: ../../packages/contracts/schema.graphql
+          scalars:
+            BigInt:
+              type: String
+            UUID:
+              type: String
+            DateTime:
+              type: DateTime
+              import: "dart:core"

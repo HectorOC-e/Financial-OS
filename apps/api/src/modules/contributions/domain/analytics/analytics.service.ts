@@ -7,6 +7,7 @@ import {
   poolActualTotalCents,
   poolExpectedTotalCents,
 } from './analytics';
+import { MemberSnapshot, Reconciliation, reconcile } from '../contribution-period';
 
 /**
  * Injectable seam over the pure analytics core (T030 / Principle X). Holds NO state and performs NO
@@ -29,5 +30,10 @@ export class AnalyticsService {
 
   standing(expectedCents: bigint, actualCents: bigint): ContributionStanding {
     return computeStanding(expectedCents, actualCents);
+  }
+
+  /** Reconcile a period: emergent pool (Σ records) vs snapshotted expected, with shortfall (FR-019/SC-005). */
+  reconcile(members: MemberSnapshot[], actualByMember: Map<string, bigint>): Reconciliation {
+    return reconcile(members, actualByMember);
   }
 }

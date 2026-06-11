@@ -52,6 +52,10 @@ export class MembershipType {
   @Field(() => GraphQLDateTime, { nullable: true }) invitationExpiresAt?: Date | null;
   @Field(() => MoneyType, { nullable: true }) declaredIncome?: MoneyType | null;
   @Field(() => Int) version!: number;
+
+  /** Internal context for field resolvers (standing/allocation) — not exposed in the schema. */
+  sharedProfileId?: string;
+  currency?: string;
 }
 
 @ObjectType('SharedProfile')

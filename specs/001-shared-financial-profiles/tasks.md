@@ -112,15 +112,15 @@ archival (FR-007c); and analysis fixes: 64-bit `BigInt` money (I1), period-scope
 
 **Independent Test**: Set two members' declared incomes and percentages; confirm expected contributions and pool total are correct; confirm a >100% cross-profile allocation and an out-of-range percentage are both rejected; confirm an income change applies to the next period only.
 
-- [ ] T047 [P] [US2] Write failing unit tests for the **contribution calculator** (expected = declared income × percentage, deterministic, 64-bit cents, zero-income → zero) in `apps/api/test/unit/contribution-calculator.spec.ts`
-- [ ] T048 [US2] Implement `ContributionPlan`, `ContributionAllocation` domain entities + contribution calculator in `apps/api/src/modules/contributions/domain/`
-- [ ] T049 [P] [US2] Write failing unit tests for the **cross-profile 100% cap** (sum across all memberships ≤ 100%, returns remaining % on rejection — FR-015a) in `apps/api/test/unit/cross-profile-cap.spec.ts`
-- [ ] T050 [US2] Implement cross-profile committed-percentage aggregation service in `apps/api/src/modules/contributions/domain/cross-profile-cap.ts`
-- [ ] T051 [US2] Implement Prisma repositories for plans/allocations (tenant-scoped, version-checked) in `apps/api/src/modules/contributions/infrastructure/`
-- [ ] T052 [US2] Implement use cases `setDeclaredIncome` (FR-011, forward-only effect) and `setAllocation` (server-side recompute/validate; FR-013/FR-014/FR-015a) emitting `DeclaredIncomeSet`/`AllocationSet` in `apps/api/src/modules/contributions/application/`
-- [ ] T053 [US2] Implement GraphQL resolvers: `setDeclaredIncome`, `setAllocation`, query `remainingAllocationPercentageBp`, expose `Membership.declaredIncome`/`allocationPercentageBp`, `SharedProfile.poolTotal` in `apps/api/src/modules/contributions/interface/`
-- [ ] T054 [P] [US2] Write failing integration test: >100% cross-profile allocation rejected with remaining % (FR-015a) in `apps/api/test/integration/us2-cap.spec.ts`
-- [ ] T055 [P] [US2] Implement Flutter allocation UI (declare income, set %, view remaining %) in `apps/mobile/lib/features/contributions/allocation/`
+- [X] T047 [P] [US2] Write failing unit tests for the **contribution calculator** (expected = declared income × percentage, deterministic, 64-bit cents, zero-income → zero) in `apps/api/test/unit/contribution-calculator.spec.ts`
+- [X] T048 [US2] Implement `ContributionPlan`, `ContributionAllocation` domain entities + contribution calculator in `apps/api/src/modules/contributions/domain/`
+- [X] T049 [P] [US2] Write failing unit tests for the **cross-profile 100% cap** (sum across all memberships ≤ 100%, returns remaining % on rejection — FR-015a) in `apps/api/test/unit/cross-profile-cap.spec.ts`
+- [X] T050 [US2] Implement cross-profile committed-percentage aggregation service in `apps/api/src/modules/contributions/domain/cross-profile-cap.ts`
+- [X] T051 [US2] Implement Prisma repositories for plans/allocations (tenant-scoped, version-checked) in `apps/api/src/modules/contributions/infrastructure/`
+- [X] T052 [US2] Implement use cases `setDeclaredIncome` (FR-011, forward-only effect) and `setAllocation` (server-side recompute/validate; FR-013/FR-014/FR-015a) emitting `DeclaredIncomeSet`/`AllocationSet` in `apps/api/src/modules/contributions/application/`
+- [X] T053 [US2] Implement GraphQL resolvers: `setDeclaredIncome`, `setAllocation`, query `remainingAllocationPercentageBp`, expose `Membership.declaredIncome`/`allocationPercentageBp`, `SharedProfile.poolTotal` in `apps/api/src/modules/contributions/interface/`
+- [X] T054 [P] [US2] Write failing integration test: >100% cross-profile allocation rejected with remaining % (FR-015a) in `apps/api/test/integration/us2-cap.spec.ts`
+- [X] T055 [P] [US2] Implement Flutter allocation UI (declare income, set %, view remaining %) in `apps/mobile/lib/features/contributions/allocation/`
 
 **Checkpoint**: Members allocate income percentages with deterministic expected contributions and an enforced global cap.
 
@@ -132,18 +132,18 @@ archival (FR-007c); and analysis fixes: 64-bit `BigInt` money (I1), period-scope
 
 **Independent Test**: Record contributions; confirm exact standings and pool reconciliation; confirm standings reflect a new contribution within 5 seconds; confirm a period auto-closes and the next opens with a fresh snapshot.
 
-- [ ] T056 [P] [US3] Write failing unit tests for the **standing calculator** (expected vs actual → variance + ON_TRACK/AHEAD/BEHIND, exact amounts) in `apps/api/test/unit/standing-calculator.spec.ts`
-- [ ] T057 [US3] Implement `ContributionPeriod` (snapshot plan version + per-member income on open — R7/FR-016a), `ContributionRecord` (append-only) entities + standing calculator in `apps/api/src/modules/contributions/domain/`
-- [ ] T058 [US3] Implement the **period auto-rollover repeatable job** (auto-close at endDate, open next with fresh snapshot; forward-only changes — FR-016a) in `apps/api/src/modules/contributions/application/jobs/period-rollover.job.ts` (registered via scheduling module T024)
-- [ ] T059 [US3] Implement `recordContribution` use case (append-only, server-side validated) emitting `ContributionRecorded`; emit `ContributionPeriodOpened`/`ContributionPeriodClosed` in `apps/api/src/modules/contributions/application/`
-- [ ] T060 [US3] Implement reconciliation in the analytics service (pool == Σ records exactly; shortfall tracked, never blocks — FR-019/SC-005) in `apps/api/src/modules/contributions/domain/analytics/`
-- [ ] T061 [US3] Implement GraphQL resolvers: `recordContribution`, `Membership.standing`, `SharedProfile.currentPeriod` in `apps/api/src/modules/contributions/interface/`
-- [ ] T062 [US3] Implement event-driven cache invalidation for standings/pool on `ContributionRecorded` to meet ≤5s freshness (SC-007) in `apps/api/src/modules/contributions/infrastructure/cache/`
-- [ ] T063 [US3] Implement GraphQL subscriptions `contributionStandingChanged`, `poolTotalChanged` (authorization-scoped) in `apps/api/src/modules/contributions/interface/`
-- [ ] T064 [P] [US3] Write failing integration test: reconciliation zero-variance after all records (SC-005) in `apps/api/test/integration/us3-reconciliation.spec.ts`
-- [ ] T065 [P] [US3] Write failing integration test: standing reflects a new contribution within 5 seconds (SC-007) in `apps/api/test/integration/us3-freshness.spec.ts`
-- [ ] T066 [P] [US3] Write failing integration test: period auto-rollover opens a fresh immutable snapshot; closed period unchanged (FR-016a) in `apps/api/test/integration/us3-rollover.spec.ts`
-- [ ] T067 [P] [US3] Implement Flutter contribution-tracking UI (record + standings dashboard, live updates) in `apps/mobile/lib/features/contributions/tracking/`
+- [X] T056 [P] [US3] Write failing unit tests for the **standing calculator** (expected vs actual → variance + ON_TRACK/AHEAD/BEHIND, exact amounts) in `apps/api/test/unit/standing-calculator.spec.ts`
+- [X] T057 [US3] Implement `ContributionPeriod` (snapshot plan version + per-member income on open — R7/FR-016a), `ContributionRecord` (append-only) entities + standing calculator in `apps/api/src/modules/contributions/domain/`
+- [X] T058 [US3] Implement the **period auto-rollover repeatable job** (auto-close at endDate, open next with fresh snapshot; forward-only changes — FR-016a) in `apps/api/src/modules/contributions/application/jobs/period-rollover.job.ts` (registered via scheduling module T024)
+- [X] T059 [US3] Implement `recordContribution` use case (append-only, server-side validated) emitting `ContributionRecorded`; emit `ContributionPeriodOpened`/`ContributionPeriodClosed` in `apps/api/src/modules/contributions/application/`
+- [X] T060 [US3] Implement reconciliation in the analytics service (pool == Σ records exactly; shortfall tracked, never blocks — FR-019/SC-005) in `apps/api/src/modules/contributions/domain/analytics/`
+- [X] T061 [US3] Implement GraphQL resolvers: `recordContribution`, `Membership.standing`, `SharedProfile.currentPeriod` in `apps/api/src/modules/contributions/interface/`
+- [X] T062 [US3] Implement event-driven cache invalidation for standings/pool on `ContributionRecorded` to meet ≤5s freshness (SC-007) in `apps/api/src/modules/contributions/infrastructure/cache/`
+- [X] T063 [US3] Implement GraphQL subscriptions `contributionStandingChanged`, `poolTotalChanged` (authorization-scoped) in `apps/api/src/modules/contributions/interface/`
+- [X] T064 [P] [US3] Write failing integration test: reconciliation zero-variance after all records (SC-005) in `apps/api/test/integration/us3-reconciliation.spec.ts`
+- [X] T065 [P] [US3] Write failing integration test: standing reflects a new contribution within 5 seconds (SC-007) in `apps/api/test/integration/us3-freshness.spec.ts`
+- [X] T066 [P] [US3] Write failing integration test: period auto-rollover opens a fresh immutable snapshot; closed period unchanged (FR-016a) in `apps/api/test/integration/us3-rollover.spec.ts`
+- [X] T067 [P] [US3] Implement Flutter contribution-tracking UI (record + standings dashboard, live updates) in `apps/mobile/lib/features/contributions/tracking/`
 
 **Checkpoint**: Contributions tracked with exact standings, ≤5s freshness, and auto-rolling periods.
 

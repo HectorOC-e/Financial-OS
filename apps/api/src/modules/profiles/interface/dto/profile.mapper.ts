@@ -30,6 +30,8 @@ export function mapMembership(row: Membership, user: User, currency: string): Me
   dto.invitationExpiresAt = row.status === 'INVITED' ? row.invitationExpiresAt : null;
   dto.declaredIncome = MoneyType.fromCents(row.declaredIncomeCents, currency);
   dto.version = row.version;
+  dto.sharedProfileId = row.sharedProfileId;
+  dto.currency = currency;
   return dto;
 }
 

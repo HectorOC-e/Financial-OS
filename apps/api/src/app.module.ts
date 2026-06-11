@@ -15,6 +15,7 @@ import { SchedulingModule } from './modules/scheduling/scheduling.module';
 import { PermissionsModule } from './modules/permissions/permissions.module';
 import { PermissionsGuard } from './modules/permissions/permissions.guard';
 import { ProfilesModule } from './modules/profiles/profiles.module';
+import { ContributionsModule } from './modules/contributions/contributions.module';
 
 /**
  * Root module. Foundational infrastructure (Phase 2): tenancy/RLS, Redis cache, event backbone,
@@ -57,6 +58,7 @@ import { ProfilesModule } from './modules/profiles/profiles.module';
     PermissionsModule,
     // Feature modules (Phase 3+).
     ProfilesModule,
+    ContributionsModule,
   ],
   providers: [
     // Capability matrix enforced on every @RequireCapability-annotated operation (FR-006).

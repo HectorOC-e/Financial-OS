@@ -76,7 +76,7 @@ class ContributionRepository {
       }
       throw ProfileException('NETWORK', r.exception.toString());
     }
-    return (r.data ?? const {}) as Map<String, dynamic>;
+    return r.data ?? <String, dynamic>{};
   }
 }
 

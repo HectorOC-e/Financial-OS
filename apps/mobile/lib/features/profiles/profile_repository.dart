@@ -118,6 +118,6 @@ class ProfileRepository {
       }
       throw ProfileException('NETWORK', result.exception.toString());
     }
-    return (result.data ?? const {}) as Map<String, dynamic>;
+    return result.data ?? <String, dynamic>{};
   }
 }

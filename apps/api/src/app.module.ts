@@ -7,12 +7,14 @@ import { join } from 'path';
 import { LoggerModule } from 'nestjs-pino';
 import { configValidationSchema } from './common/config/config.module';
 import { buildGraphQLContext } from './common/graphql/graphql-context';
+import { DomainError, toGraphQLError } from './common/errors';
 import { CacheModule } from './common/cache/cache.module';
 import { TenancyModule } from './modules/tenancy/tenancy.module';
 import { EventsModule } from './modules/events/events.module';
 import { SchedulingModule } from './modules/scheduling/scheduling.module';
 import { PermissionsModule } from './modules/permissions/permissions.module';
 import { PermissionsGuard } from './modules/permissions/permissions.guard';
+import { ProfilesModule } from './modules/profiles/profiles.module';
 
 /**
  * Root module. Foundational infrastructure (Phase 2): tenancy/RLS, Redis cache, event backbone,
@@ -37,6 +39,15 @@ import { PermissionsGuard } from './modules/permissions/permissions.guard';
       sortSchema: true,
       playground: process.env.NODE_ENV !== 'production',
       context: buildGraphQLContext,
+      // Map any DomainError that reaches Apollo to a stable extensions.code (Principle XI).
+      formatError: (formatted, error) => {
+        const original = (error as { originalError?: unknown })?.originalError;
+        if (original instanceof DomainError) {
+          const mapped = toGraphQLError(original);
+          return { ...formatted, message: mapped.message, extensions: mapped.extensions };
+        }
+        return formatted;
+      },
     }),
     // Foundational, globally-exported modules (Phase 2).
     CacheModule,
@@ -44,6 +55,8 @@ import { PermissionsGuard } from './modules/permissions/permissions.guard';
     EventsModule,
     SchedulingModule,
     PermissionsModule,
+    // Feature modules (Phase 3+).
+    ProfilesModule,
   ],
   providers: [
     // Capability matrix enforced on every @RequireCapability-annotated operation (FR-006).

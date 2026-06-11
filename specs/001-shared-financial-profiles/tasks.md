@@ -86,21 +86,21 @@ archival (FR-007c); and analysis fixes: 64-bit `BigInt` money (I1), period-scope
 
 **Independent Test**: Create a profile; invite + accept and invite + decline a member; confirm a Viewer write is rejected; confirm another member's personal accounts are invisible; confirm a stale-version role change returns CONFLICT; archive as sole owner and confirm read-only; confirm all changes are audited.
 
-- [ ] T032 [P] [US1] Implement `SharedProfile`, `PersonalProfile`, `Membership` domain entities + invariants (single OWNER; status machine INVITED→ACTIVE|DECLINED|EXPIRED→LEFT; ARCHIVED read-only) in `apps/api/src/modules/profiles/domain/entities/`
-- [ ] T033 [P] [US1] Write failing unit tests for membership/ownership invariants (single owner, nominate-and-accept FR-007b, owner-must-transfer-before-leave FR-007a, sole-owner archive FR-007c, status transitions FR-002a) in `apps/api/test/unit/membership-invariants.spec.ts`
-- [ ] T034 [US1] Implement Prisma repositories for profiles/memberships (tenant-scoped, version-checked via T020 helper) in `apps/api/src/modules/profiles/infrastructure/`
-- [ ] T035 [US1] Implement application use cases: createSharedProfile, inviteMember, acceptInvitation, declineInvitation, changeMemberRole (expectedVersion), leaveProfile, nominateOwner, acceptOwnership, archiveProfile in `apps/api/src/modules/profiles/application/`
-- [ ] T036 [US1] Implement the **invitation-expiry repeatable job** (transition unanswered INVITED → EXPIRED at invitedAt+14d) in `apps/api/src/modules/profiles/application/jobs/invitation-expiry.job.ts` (registered via scheduling module T024)
-- [ ] T037 [US1] Emit domain events via outbox (SharedProfileCreated, MemberInvited, InvitationAccepted, InvitationDeclined, InvitationExpired, MemberRoleChanged, MemberLeft, OwnerNominated, OwnershipTransferred, ProfileArchived) in `apps/api/src/modules/profiles/application/`
-- [ ] T038 [US1] Implement GraphQL resolvers + inputs (createSharedProfile, inviteMember, acceptInvitation, declineInvitation, changeMemberRole, leaveProfile, nominateOwner, acceptOwnership, archiveProfile; queries `sharedProfile`, `myMemberships`, `me`) guarded by `PermissionsGuard`; reject writes on ARCHIVED profiles in `apps/api/src/modules/profiles/interface/`
-- [ ] T039 [US1] Enforce personal-account isolation in profile/membership resolvers (other members' personal accounts never returned — FR-004) in `apps/api/src/modules/profiles/interface/`
-- [ ] T040 [US1] Wire audit entries for all membership/permission/ownership/archival changes (FR-007) in `apps/api/src/modules/profiles/application/`
-- [ ] T041 [P] [US1] Write failing integration test: Viewer write rejected, no state change (SC-003) in `apps/api/test/integration/us1-permissions.spec.ts`
-- [ ] T042 [P] [US1] Write failing integration test: cross-member personal-account invisibility (SC-004) in `apps/api/test/integration/us1-isolation.spec.ts`
-- [ ] T043 [P] [US1] Write failing integration test: stale-version mutation returns CONFLICT (FR-006a) in `apps/api/test/integration/us1-concurrency.spec.ts`
-- [ ] T044 [P] [US1] Write failing integration test: invitation decline + 14-day expiry transitions; archived profile is read-only (FR-002a, FR-007c) in `apps/api/test/integration/us1-lifecycle.spec.ts`
-- [ ] T045 [P] [US1] Implement Flutter profile-management feature (create/invite/accept/decline/role/transfer/archive) in `apps/mobile/lib/features/profiles/`
-- [ ] T046 [US1] Add GraphQL contract test asserting emitted SDL matches `packages/contracts/schema.graphql` for US1 operations in `apps/api/test/contract/schema.spec.ts`
+- [X] T032 [P] [US1] Implement `SharedProfile`, `PersonalProfile`, `Membership` domain entities + invariants (single OWNER; status machine INVITED→ACTIVE|DECLINED|EXPIRED→LEFT; ARCHIVED read-only) in `apps/api/src/modules/profiles/domain/entities/`
+- [X] T033 [P] [US1] Write failing unit tests for membership/ownership invariants (single owner, nominate-and-accept FR-007b, owner-must-transfer-before-leave FR-007a, sole-owner archive FR-007c, status transitions FR-002a) in `apps/api/test/unit/membership-invariants.spec.ts`
+- [X] T034 [US1] Implement Prisma repositories for profiles/memberships (tenant-scoped, version-checked via T020 helper) in `apps/api/src/modules/profiles/infrastructure/`
+- [X] T035 [US1] Implement application use cases: createSharedProfile, inviteMember, acceptInvitation, declineInvitation, changeMemberRole (expectedVersion), leaveProfile, nominateOwner, acceptOwnership, archiveProfile in `apps/api/src/modules/profiles/application/`
+- [X] T036 [US1] Implement the **invitation-expiry repeatable job** (transition unanswered INVITED → EXPIRED at invitedAt+14d) in `apps/api/src/modules/profiles/application/jobs/invitation-expiry.job.ts` (registered via scheduling module T024)
+- [X] T037 [US1] Emit domain events via outbox (SharedProfileCreated, MemberInvited, InvitationAccepted, InvitationDeclined, InvitationExpired, MemberRoleChanged, MemberLeft, OwnerNominated, OwnershipTransferred, ProfileArchived) in `apps/api/src/modules/profiles/application/`
+- [X] T038 [US1] Implement GraphQL resolvers + inputs (createSharedProfile, inviteMember, acceptInvitation, declineInvitation, changeMemberRole, leaveProfile, nominateOwner, acceptOwnership, archiveProfile; queries `sharedProfile`, `myMemberships`, `me`) guarded by `PermissionsGuard`; reject writes on ARCHIVED profiles in `apps/api/src/modules/profiles/interface/`
+- [X] T039 [US1] Enforce personal-account isolation in profile/membership resolvers (other members' personal accounts never returned — FR-004) in `apps/api/src/modules/profiles/interface/`
+- [X] T040 [US1] Wire audit entries for all membership/permission/ownership/archival changes (FR-007) in `apps/api/src/modules/profiles/application/`
+- [X] T041 [P] [US1] Write failing integration test: Viewer write rejected, no state change (SC-003) in `apps/api/test/integration/us1-permissions.spec.ts`
+- [X] T042 [P] [US1] Write failing integration test: cross-member personal-account invisibility (SC-004) in `apps/api/test/integration/us1-isolation.spec.ts`
+- [X] T043 [P] [US1] Write failing integration test: stale-version mutation returns CONFLICT (FR-006a) in `apps/api/test/integration/us1-concurrency.spec.ts`
+- [X] T044 [P] [US1] Write failing integration test: invitation decline + 14-day expiry transitions; archived profile is read-only (FR-002a, FR-007c) in `apps/api/test/integration/us1-lifecycle.spec.ts`
+- [X] T045 [P] [US1] Implement Flutter profile-management feature (create/invite/accept/decline/role/transfer/archive) in `apps/mobile/lib/features/profiles/`
+- [X] T046 [US1] Add GraphQL contract test asserting emitted SDL matches `packages/contracts/schema.graphql` for US1 operations in `apps/api/test/contract/schema.spec.ts`
 
 **Checkpoint**: Full profile governance lifecycle works and is demoable (MVP).
 

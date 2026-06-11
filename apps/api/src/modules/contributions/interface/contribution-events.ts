@@ -58,4 +58,10 @@ export class ContributionEvents {
     await this.invalidate(tenantId, profileId);
     this.publishPool(profileId, pool);
   }
+
+  /** Redistribution is forward-only: invalidate caches and publish the (unchanged-yet) pool (T072). */
+  async onRedistributed(tenantId: string, profileId: string, pool: MoneyType): Promise<void> {
+    await this.invalidate(tenantId, profileId);
+    this.publishPool(profileId, pool);
+  }
 }

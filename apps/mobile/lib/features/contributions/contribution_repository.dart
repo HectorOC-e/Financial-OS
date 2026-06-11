@@ -58,6 +58,21 @@ class ContributionRepository {
         },
       });
 
+  /// Redistribute percentages (US4). Effective next period only; server preserves history (SC-006).
+  Future<Map<String, dynamic>> redistribute({
+    required String sharedProfileId,
+    required List<({String membershipId, int percentageBp})> allocations,
+  }) async {
+    final data = await _mutate(redistributeMutation, {
+      'sharedProfileId': sharedProfileId,
+      'allocations': [
+        for (final a in allocations)
+          {'sharedProfileId': sharedProfileId, 'membershipId': a.membershipId, 'percentageBp': a.percentageBp},
+      ],
+    });
+    return data['redistribute'] as Map<String, dynamic>;
+  }
+
   Future<Map<String, dynamic>> _query(String doc, [Map<String, dynamic> vars = const {}]) async {
     final r = await _client.query(QueryOptions(document: gql(doc), variables: vars, fetchPolicy: FetchPolicy.networkOnly));
     return _unwrap(r);

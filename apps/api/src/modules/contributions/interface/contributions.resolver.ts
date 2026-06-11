@@ -69,6 +69,25 @@ export class ContributionsResolver {
     return this.read.recordDto(principal, record.id);
   }
 
+  @Mutation(() => ContributionPlanType)
+  async redistribute(
+    @Context() ctx: GraphQLContext,
+    @Args('sharedProfileId', { type: () => ID }) sharedProfileId: string,
+    @Args('allocations', { type: () => [SetAllocationInput] }) allocations: SetAllocationInput[],
+  ): Promise<ContributionPlanType> {
+    const principal = principalOf(ctx);
+    const plan = unwrap(
+      await this.contributions.redistribute(
+        principal,
+        sharedProfileId,
+        allocations.map((a) => ({ membershipId: a.membershipId, percentageBp: a.percentageBp })),
+      ),
+    );
+    const pool = await this.read.poolTotalByProfileId(principal, sharedProfileId);
+    if (pool) await this.events.onRedistributed(principal.tenantId, sharedProfileId, pool);
+    return this.read.planDto(principal, plan.id);
+  }
+
   @Query(() => Int)
   remainingAllocationPercentageBp(@Context() ctx: GraphQLContext): Promise<number> {
     return this.contributions.remainingAllocationPercentageBp(principalOf(ctx));

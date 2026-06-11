@@ -50,6 +50,15 @@ const String recordContributionMutation = r'''
   }
 ''';
 
+const String redistributeMutation = r'''
+  mutation Redistribute($sharedProfileId: UUID!, $allocations: [SetAllocationInput!]!) {
+    redistribute(sharedProfileId: $sharedProfileId, allocations: $allocations) {
+      id version
+      allocations { id percentageBp membership { id user { id displayName } } }
+    }
+  }
+''';
+
 const String poolTotalChangedSubscription = r'''
   subscription PoolTotalChanged($sharedProfileId: UUID!) {
     poolTotalChanged(sharedProfileId: $sharedProfileId) { amountCents currency }

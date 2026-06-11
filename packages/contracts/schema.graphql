@@ -127,8 +127,13 @@ type Mutation {
 
   createSharedGoal(sharedProfileId: UUID!, name: String!, targetAmountCents: BigInt!): SharedGoal!
   fundGoal(input: FundGoalInput!): SharedGoal!
+  createSharedDebt(sharedProfileId: UUID!, kind: SharedDebtKind!, name: String!, outstandingBalanceCents: BigInt!): SharedDebt!
   paySharedDebt(input: PaySharedDebtInput!): SharedDebt!        # rejects overpayment (CHK029 default)
   setDebtResponsibility(input: SetDebtResponsibilityInput!): SharedDebt!  # set must sum to 100%
+  createSharedInvestment(sharedProfileId: UUID!, name: String!, currentValueCents: BigInt!): SharedInvestment!
+  updateInvestmentValue(investmentId: UUID!, newValueCents: BigInt!, expectedVersion: Int!): SharedInvestment!
+  createSharedBudget(sharedProfileId: UUID!, category: String!, limitCents: BigInt!): SharedBudget!   # scoped to current period (I2)
+  recordBudgetSpend(budgetId: UUID!, amountCents: BigInt!, expectedVersion: Int!): SharedBudget!
 }
 
 # ---------- Subscriptions (live standings / pool) ----------

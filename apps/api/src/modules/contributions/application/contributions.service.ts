@@ -16,6 +16,7 @@ import type { TenantPrincipal } from '../../tenancy/tenant-context';
 import { ContributionRepository } from '../infrastructure/contribution.repository';
 import { PeriodService } from './period.service';
 import { checkAllocationWithinCap, remainingBp } from '../domain/cross-profile-cap';
+import { nextPlanVersion, validateRedistribution, RedistributionAllocation } from '../domain/redistribution';
 
 export interface SetDeclaredIncomeInput {
   sharedProfileId: string;
@@ -145,12 +146,86 @@ export class ContributionsService {
     });
   }
 
+  /**
+   * Redistribute percentages (US4 — FR-016/SC-006). Creates a NEW plan version with the supplied
+   * allocations; prior versions and snapshotted periods are untouched, so the change is forward-only
+   * (applies from the next period opened). Re-validates ranges and the cross-profile cap per member.
+   */
+  async redistribute(
+    principal: TenantPrincipal,
+    sharedProfileId: string,
+    allocations: RedistributionAllocation[],
+  ): Promise<Result<ContributionPlan>> {
+    return this.tenancy.withTenant(principal.tenantId, async (tx) => {
+      const actorCheck = await this.requireCapability(tx, sharedProfileId, principal.userId, Capability.REDISTRIBUTE_PERCENTAGES);
+      if (isErr(actorCheck)) return actorCheck;
+      const actor = actorCheck.value;
+
+      const profile = await tx.sharedProfile.findUnique({ where: { id: sharedProfileId } });
+      if (!profile) return err(DomainError.notFound('Shared profile not found'));
+      if (profile.status !== 'ACTIVE') return err(DomainError.archived());
+
+      const shapeCheck = validateRedistribution(allocations);
+      if (isErr(shapeCheck)) return shapeCheck;
+
+      // Each member's new percentage must keep them within 100% across all their profiles (FR-015a).
+      for (const alloc of allocations) {
+        const membership = await tx.membership.findUnique({ where: { id: alloc.membershipId } });
+        if (!membership || membership.sharedProfileId !== sharedProfileId || membership.status !== 'ACTIVE') {
+          return err(DomainError.validation('Allocation targets a non-active member of this profile', { membershipId: alloc.membershipId }));
+        }
+        const committed = await this.repo.committedByUser(tx, membership.userId);
+        const capCheck = checkAllocationWithinCap(committed, sharedProfileId, alloc.percentageBp);
+        if (isErr(capCheck)) return capCheck;
+      }
+
+      const current = await this.repo.currentPlan(tx, sharedProfileId);
+      const version = nextPlanVersion(current?.version ?? null);
+      const plan = await this.repo.createPlan(tx, principal.tenantId, sharedProfileId, version, actor.id, null);
+      for (const alloc of allocations) {
+        await this.repo.upsertAllocation(tx, principal.tenantId, plan.id, alloc.membershipId, alloc.percentageBp);
+      }
+
+      await this.outbox.write(tx, principal.tenantId, {
+        eventType: EventType.PercentageRedistributed,
+        aggregateType: 'ContributionPlan',
+        aggregateId: plan.id,
+        actorMembershipId: actor.id,
+        payload: { sharedProfileId, newVersion: version, effectiveFromPeriodId: null },
+      });
+      await this.audit.write(tx, principal.tenantId, {
+        sharedProfileId,
+        actorMembershipId: actor.id,
+        action: 'PercentageRedistributed',
+        afterValue: { newVersion: version, allocations },
+      });
+      return ok(plan);
+    });
+  }
+
   /** A member's available percentage across all their profiles (FR-015a). */
   async remainingAllocationPercentageBp(principal: TenantPrincipal): Promise<number> {
     return this.tenancy.withTenant(principal.tenantId, async (tx) => {
       const committed = await this.repo.committedByUser(tx, principal.userId);
       return remainingBp(committed);
     });
+  }
+
+  /** Resolve the caller's ACTIVE membership in a profile and enforce a capability (FR-006). */
+  private async requireCapability(
+    tx: TenantTx,
+    sharedProfileId: string,
+    userId: string,
+    capability: Capability,
+  ): Promise<Result<Membership>> {
+    const membership = await tx.membership.findUnique({ where: { sharedProfileId_userId: { sharedProfileId, userId } } });
+    if (!membership || membership.status !== 'ACTIVE') {
+      return err(DomainError.forbidden('No active membership for this profile', { capability }));
+    }
+    if (!can(membership.role, capability)) {
+      return err(DomainError.forbidden('Your role does not permit this action', { capability, role: membership.role }));
+    }
+    return ok(membership);
   }
 
   /**

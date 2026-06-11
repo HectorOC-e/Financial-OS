@@ -155,14 +155,14 @@ archival (FR-007c); and analysis fixes: 64-bit `BigInt` money (I1), period-scope
 
 **Independent Test**: Redistribute; confirm a new plan version applies to the next period and prior-period expected amounts and records are unchanged.
 
-- [ ] T068 [P] [US4] Write failing unit tests for **plan versioning** (redistribution creates new version, prior snapshots immutable, forward-only — FR-016/FR-016a/SC-006) in `apps/api/test/unit/plan-versioning.spec.ts`
-- [ ] T069 [US4] Implement plan-versioning logic (new `ContributionPlan.version`, `effectiveFromPeriodId`, never mutate closed periods) in `apps/api/src/modules/contributions/domain/redistribution.ts`
-- [ ] T070 [US4] Implement `redistribute` use case (re-applies cross-profile cap + range validation) emitting `PercentageRedistributed` in `apps/api/src/modules/contributions/application/`
-- [ ] T071 [US4] Implement GraphQL resolver `redistribute` returning new `ContributionPlan` in `apps/api/src/modules/contributions/interface/`
-- [ ] T072 [US4] Invalidate standing/pool caches on `PercentageRedistributed` (forward only) in `apps/api/src/modules/contributions/infrastructure/cache/`
-- [ ] T073 [P] [US4] Write failing integration test: prior-period expected amounts + records unchanged after redistribution (SC-006) in `apps/api/test/integration/us4-history.spec.ts`
-- [ ] T074 [US4] Wire audit entries for redistribution events in `apps/api/src/modules/contributions/application/`
-- [ ] T075 [P] [US4] Implement Flutter redistribution UI (edit percentages, effective-next-period note) in `apps/mobile/lib/features/contributions/redistribution/`
+- [X] T068 [P] [US4] Write failing unit tests for **plan versioning** (redistribution creates new version, prior snapshots immutable, forward-only — FR-016/FR-016a/SC-006) in `apps/api/test/unit/plan-versioning.spec.ts`
+- [X] T069 [US4] Implement plan-versioning logic (new `ContributionPlan.version`, `effectiveFromPeriodId`, never mutate closed periods) in `apps/api/src/modules/contributions/domain/redistribution.ts`
+- [X] T070 [US4] Implement `redistribute` use case (re-applies cross-profile cap + range validation) emitting `PercentageRedistributed` in `apps/api/src/modules/contributions/application/`
+- [X] T071 [US4] Implement GraphQL resolver `redistribute` returning new `ContributionPlan` in `apps/api/src/modules/contributions/interface/`
+- [X] T072 [US4] Invalidate standing/pool caches on `PercentageRedistributed` (forward only) in `apps/api/src/modules/contributions/infrastructure/cache/`
+- [X] T073 [P] [US4] Write failing integration test: prior-period expected amounts + records unchanged after redistribution (SC-006) in `apps/api/test/integration/us4-history.spec.ts`
+- [X] T074 [US4] Wire audit entries for redistribution events in `apps/api/src/modules/contributions/application/`
+- [X] T075 [P] [US4] Implement Flutter redistribution UI (edit percentages, effective-next-period note) in `apps/mobile/lib/features/contributions/redistribution/`
 
 **Checkpoint**: Forward-only redistribution with provably preserved history.
 
@@ -174,23 +174,23 @@ archival (FR-007c); and analysis fixes: 64-bit `BigInt` money (I1), period-scope
 
 **Independent Test**: Create a goal and a debt; fund/pay from the pool with exact balance changes; confirm overpayment rejected; confirm debt responsibilities default to contribution % and sum to 100%; confirm a stale-version edit returns CONFLICT; confirm a budget is period-scoped.
 
-- [ ] T076 [P] [US5] Write failing unit tests for **overpayment rejection** (payment ≤ outstanding; balance never < 0 — FR-020b/FR-024) in `apps/api/test/unit/overpayment.spec.ts`
-- [ ] T077 [P] [US5] Write failing unit tests for **debt-responsibility rules** (default to contribution %, overridable, sum to 100%, proportional reassign on leave — FR-020a) in `apps/api/test/unit/debt-responsibility.spec.ts`
-- [ ] T078 [P] [US5] Implement `SharedGoal` entity + funding logic (exact amount — FR-020) in `apps/api/src/modules/shared-elements/domain/goal.ts`
-- [ ] T079 [P] [US5] Implement `SharedDebt`/`SharedCreditCard` entity + payment logic with overpayment rejection in `apps/api/src/modules/shared-elements/domain/debt.ts`
-- [ ] T080 [P] [US5] Implement `DebtResponsibility` + proportional reassignment-on-leave (uses largest-remainder allocator) in `apps/api/src/modules/shared-elements/domain/debt-responsibility.ts`
-- [ ] T081 [P] [US5] Implement `SharedInvestment` and period-scoped `SharedBudget` (remaining = limit − spent; resets per period — FR-018/analysis I2) in `apps/api/src/modules/shared-elements/domain/`
-- [ ] T082 [US5] Implement Prisma repositories for shared elements (tenant-scoped, version-checked — FR-006a) in `apps/api/src/modules/shared-elements/infrastructure/`
-- [ ] T083 [US5] Implement application use cases: createSharedGoal, fundGoal, paySharedDebt, setDebtResponsibility (all with `expectedVersion`), budget create/record-spend, investment value update in `apps/api/src/modules/shared-elements/application/`
-- [ ] T084 [US5] Hook `MemberLeft` consumer to reassign debt responsibilities proportionally (FR-020a) in `apps/api/src/modules/shared-elements/application/`
-- [ ] T085 [US5] Emit events (GoalFunded, SharedDebtPaid, DebtResponsibilitySet) via outbox in `apps/api/src/modules/shared-elements/application/`
-- [ ] T086 [US5] Implement GraphQL resolvers + inputs (with `expectedVersion`) for goals/debts/credit cards/investments/budgets, scoped by permission (Viewer read-only); reject writes on ARCHIVED profiles in `apps/api/src/modules/shared-elements/interface/`
-- [ ] T087 [P] [US5] Write failing integration test: overpayment rejected, balance unchanged (FR-020b) in `apps/api/test/integration/us5-overpayment.spec.ts`
-- [ ] T088 [P] [US5] Write failing integration test: shortfall does NOT block goal funding / debt payment (FR-019) in `apps/api/test/integration/us5-shortfall-nonblocking.spec.ts`
-- [ ] T089 [P] [US5] Write failing integration test: debt responsibilities reassign proportionally and still sum to 100% after a member leaves (FR-020a) in `apps/api/test/integration/us5-reassign.spec.ts`
-- [ ] T090 [P] [US5] Implement Flutter shared-elements UI (goals, debts, credit cards, investments, budgets) in `apps/mobile/lib/features/shared_elements/`
-- [ ] T091 [US5] Add GraphQL contract tests for shared-element operations in `apps/api/test/contract/schema.spec.ts`
-- [ ] T092 [US5] Wire audit entries for shared-element financially significant mutations (FR-007/Architectural Constraints) in `apps/api/src/modules/shared-elements/application/`
+- [X] T076 [P] [US5] Write failing unit tests for **overpayment rejection** (payment ≤ outstanding; balance never < 0 — FR-020b/FR-024) in `apps/api/test/unit/overpayment.spec.ts`
+- [X] T077 [P] [US5] Write failing unit tests for **debt-responsibility rules** (default to contribution %, overridable, sum to 100%, proportional reassign on leave — FR-020a) in `apps/api/test/unit/debt-responsibility.spec.ts`
+- [X] T078 [P] [US5] Implement `SharedGoal` entity + funding logic (exact amount — FR-020) in `apps/api/src/modules/shared-elements/domain/goal.ts`
+- [X] T079 [P] [US5] Implement `SharedDebt`/`SharedCreditCard` entity + payment logic with overpayment rejection in `apps/api/src/modules/shared-elements/domain/debt.ts`
+- [X] T080 [P] [US5] Implement `DebtResponsibility` + proportional reassignment-on-leave (uses largest-remainder allocator) in `apps/api/src/modules/shared-elements/domain/debt-responsibility.ts`
+- [X] T081 [P] [US5] Implement `SharedInvestment` and period-scoped `SharedBudget` (remaining = limit − spent; resets per period — FR-018/analysis I2) in `apps/api/src/modules/shared-elements/domain/`
+- [X] T082 [US5] Implement Prisma repositories for shared elements (tenant-scoped, version-checked — FR-006a) in `apps/api/src/modules/shared-elements/infrastructure/`
+- [X] T083 [US5] Implement application use cases: createSharedGoal, fundGoal, paySharedDebt, setDebtResponsibility (all with `expectedVersion`), budget create/record-spend, investment value update in `apps/api/src/modules/shared-elements/application/`
+- [X] T084 [US5] Hook `MemberLeft` consumer to reassign debt responsibilities proportionally (FR-020a) in `apps/api/src/modules/shared-elements/application/`
+- [X] T085 [US5] Emit events (GoalFunded, SharedDebtPaid, DebtResponsibilitySet) via outbox in `apps/api/src/modules/shared-elements/application/`
+- [X] T086 [US5] Implement GraphQL resolvers + inputs (with `expectedVersion`) for goals/debts/credit cards/investments/budgets, scoped by permission (Viewer read-only); reject writes on ARCHIVED profiles in `apps/api/src/modules/shared-elements/interface/`
+- [X] T087 [P] [US5] Write failing integration test: overpayment rejected, balance unchanged (FR-020b) in `apps/api/test/integration/us5-overpayment.spec.ts`
+- [X] T088 [P] [US5] Write failing integration test: shortfall does NOT block goal funding / debt payment (FR-019) in `apps/api/test/integration/us5-shortfall-nonblocking.spec.ts`
+- [X] T089 [P] [US5] Write failing integration test: debt responsibilities reassign proportionally and still sum to 100% after a member leaves (FR-020a) in `apps/api/test/integration/us5-reassign.spec.ts`
+- [X] T090 [P] [US5] Implement Flutter shared-elements UI (goals, debts, credit cards, investments, budgets) in `apps/mobile/lib/features/shared_elements/`
+- [X] T091 [US5] Add GraphQL contract tests for shared-element operations in `apps/api/test/contract/schema.spec.ts`
+- [X] T092 [US5] Wire audit entries for shared-element financially significant mutations (FR-007/Architectural Constraints) in `apps/api/src/modules/shared-elements/application/`
 
 **Checkpoint**: Shared elements fully manageable with enforced money-integrity and concurrency rules.
 

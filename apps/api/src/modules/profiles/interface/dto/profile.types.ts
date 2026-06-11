@@ -33,6 +33,9 @@ export class AccountType {
 export class PersonalProfileType {
   @Field(() => ID) id!: string;
   @Field(() => [AccountType]) accounts!: AccountType[];
+
+  /** Internal owner reference for the accounts field resolver (not exposed in the schema). */
+  userId?: string;
 }
 
 @ObjectType('User')

@@ -20,5 +20,7 @@ import { ProfilesResolver } from './interface/profiles.resolver';
     ProfilesResolver,
     InvitationExpiryJob,
   ],
+  // ProfileRepository is reused by the accounts module (personal-profile resolution).
+  exports: [ProfileRepository, MembershipRepository],
 })
 export class ProfilesModule {}

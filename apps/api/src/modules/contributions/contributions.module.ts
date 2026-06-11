@@ -33,5 +33,7 @@ import {
     MembershipContributionsResolver,
     ContributionSubscriptionsResolver,
   ],
+  // Reused by the accounts module (contribute-from-account) and ai-coaching (read-only analytics).
+  exports: [ContributionRepository, PeriodService, AnalyticsService],
 })
 export class ContributionsModule {}

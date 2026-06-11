@@ -28,7 +28,8 @@ export class ProfilesReadService {
       const personal = await this.profiles.findOrCreatePersonalProfile(tx, principal.tenantId, principal.userId);
       const profileDto = new PersonalProfileType();
       profileDto.id = personal.id;
-      profileDto.accounts = []; // personal accounts arrive in US6 (T093+)
+      profileDto.userId = personal.userId;
+      profileDto.accounts = []; // resolved per-owner by the accounts module field resolver (US6)
       return mapUserSelf(user, profileDto);
     });
   }

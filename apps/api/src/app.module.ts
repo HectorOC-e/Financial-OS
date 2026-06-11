@@ -17,6 +17,8 @@ import { PermissionsGuard } from './modules/permissions/permissions.guard';
 import { ProfilesModule } from './modules/profiles/profiles.module';
 import { ContributionsModule } from './modules/contributions/contributions.module';
 import { SharedElementsModule } from './modules/shared-elements/shared-elements.module';
+import { AccountsModule } from './modules/accounts/accounts.module';
+import { AiCoachingModule } from './modules/ai-coaching/ai-coaching.module';
 
 /**
  * Root module. Foundational infrastructure (Phase 2): tenancy/RLS, Redis cache, event backbone,
@@ -61,6 +63,8 @@ import { SharedElementsModule } from './modules/shared-elements/shared-elements.
     ProfilesModule,
     ContributionsModule,
     SharedElementsModule,
+    AccountsModule,
+    AiCoachingModule,
   ],
   providers: [
     // Capability matrix enforced on every @RequireCapability-annotated operation (FR-006).

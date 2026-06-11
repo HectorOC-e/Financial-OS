@@ -202,12 +202,12 @@ archival (FR-007c); and analysis fixes: 64-bit `BigInt` money (I1), period-scope
 
 **Independent Test**: Create personal accounts; confirm invisible to other members and excluded from pool; contribute from one and confirm only the contributed amount enters the pool.
 
-- [ ] T093 [P] [US6] Implement `Account` entity with single-profile ownership (PERSONAL|SHARED, exactly one profile — FR-010a) and all account types in `apps/api/src/modules/accounts/domain/account.ts`
-- [ ] T094 [US6] Implement Prisma repository + use cases for personal accounts (create/list, tenant + user scoped) in `apps/api/src/modules/accounts/`
-- [ ] T095 [US6] Implement GraphQL resolvers exposing `PersonalProfile.accounts` only to the owning user; exclude from shared pool calculations (FR-010) in `apps/api/src/modules/accounts/interface/`
-- [ ] T096 [US6] Implement contribute-from-account flow so only the contributed amount enters the pool, not the account balance (FR-010) in `apps/api/src/modules/accounts/application/`
-- [ ] T097 [P] [US6] Write failing integration test: personal account invisible to other members and excluded from pool (FR-004, FR-010a) in `apps/api/test/integration/us6-personal-isolation.spec.ts`
-- [ ] T098 [P] [US6] Implement Flutter personal-accounts UI in `apps/mobile/lib/features/accounts/`
+- [X] T093 [P] [US6] Implement `Account` entity with single-profile ownership (PERSONAL|SHARED, exactly one profile — FR-010a) and all account types in `apps/api/src/modules/accounts/domain/account.ts`
+- [X] T094 [US6] Implement Prisma repository + use cases for personal accounts (create/list, tenant + user scoped) in `apps/api/src/modules/accounts/`
+- [X] T095 [US6] Implement GraphQL resolvers exposing `PersonalProfile.accounts` only to the owning user; exclude from shared pool calculations (FR-010) in `apps/api/src/modules/accounts/interface/`
+- [X] T096 [US6] Implement contribute-from-account flow so only the contributed amount enters the pool, not the account balance (FR-010) in `apps/api/src/modules/accounts/application/`
+- [X] T097 [P] [US6] Write failing integration test: personal account invisible to other members and excluded from pool (FR-004, FR-010a) in `apps/api/test/integration/us6-personal-isolation.spec.ts`
+- [X] T098 [P] [US6] Implement Flutter personal-accounts UI in `apps/mobile/lib/features/accounts/`
 
 **Checkpoint**: Personal accounts coexist with shared participation under full isolation.
 
@@ -219,14 +219,14 @@ archival (FR-007c); and analysis fixes: 64-bit `BigInt` money (I1), period-scope
 
 **Independent Test**: Request coaching insights; confirm data is permission-scoped, no state change occurs, and applying a suggestion requires a normal validated mutation.
 
-- [ ] T099 [P] [US7] Implement read-only coaching read-model projection (assembled from reusable analytics service; no write collaborators — Principle III/R9) in `apps/api/src/modules/ai-coaching/domain/`
-- [ ] T100 [US7] Implement OpenRouter client with permission-scoped, redacted prompt assembly (define included fields) in `apps/api/src/modules/ai-coaching/infrastructure/openrouter.client.ts`
-- [ ] T101 [US7] Implement `coachingInsights` query returning `CoachingInsight`/`CoachingSuggestion` (advisory only; `suggestedMutation` is a hint) in `apps/api/src/modules/ai-coaching/interface/`
-- [ ] T102 [US7] Implement graceful degradation for OpenRouter timeout/unavailability (defined fallback) in `apps/api/src/modules/ai-coaching/infrastructure/`
-- [ ] T103 [US7] Subscribe a READ-ONLY projection consumer to `ContributionRecorded`/`PercentageRedistributed` to refresh the coaching read model (no commands emitted) in `apps/api/src/modules/ai-coaching/application/`
-- [ ] T104 [P] [US7] Write failing integration test: coaching path produces 0 state changes (no outbox/audit writes) — SC-008 in `apps/api/test/integration/us7-ai-readonly.spec.ts`
-- [ ] T105 [P] [US7] Write failing integration test: coaching data respects requester permission scope (FR-022) in `apps/api/test/integration/us7-ai-scope.spec.ts`
-- [ ] T106 [P] [US7] Implement Flutter coaching UI (insights + suggestions; applying routes through normal mutations) in `apps/mobile/lib/features/coaching/`
+- [X] T099 [P] [US7] Implement read-only coaching read-model projection (assembled from reusable analytics service; no write collaborators — Principle III/R9) in `apps/api/src/modules/ai-coaching/domain/`
+- [X] T100 [US7] Implement OpenRouter client with permission-scoped, redacted prompt assembly (define included fields) in `apps/api/src/modules/ai-coaching/infrastructure/openrouter.client.ts`
+- [X] T101 [US7] Implement `coachingInsights` query returning `CoachingInsight`/`CoachingSuggestion` (advisory only; `suggestedMutation` is a hint) in `apps/api/src/modules/ai-coaching/interface/`
+- [X] T102 [US7] Implement graceful degradation for OpenRouter timeout/unavailability (defined fallback) in `apps/api/src/modules/ai-coaching/infrastructure/`
+- [X] T103 [US7] Subscribe a READ-ONLY projection consumer to `ContributionRecorded`/`PercentageRedistributed` to refresh the coaching read model (no commands emitted) in `apps/api/src/modules/ai-coaching/application/`
+- [X] T104 [P] [US7] Write failing integration test: coaching path produces 0 state changes (no outbox/audit writes) — SC-008 in `apps/api/test/integration/us7-ai-readonly.spec.ts`
+- [X] T105 [P] [US7] Write failing integration test: coaching data respects requester permission scope (FR-022) in `apps/api/test/integration/us7-ai-scope.spec.ts`
+- [X] T106 [P] [US7] Implement Flutter coaching UI (insights + suggestions; applying routes through normal mutations) in `apps/mobile/lib/features/coaching/`
 
 **Checkpoint**: AI coaching available and structurally incapable of mutating financial state.
 

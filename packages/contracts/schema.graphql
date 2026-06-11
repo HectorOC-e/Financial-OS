@@ -105,6 +105,8 @@ input PaySharedDebtInput { sharedDebtId: UUID!, amountCents: BigInt!, expectedVe
 input SetDebtResponsibilityInput { sharedDebtId: UUID!, membershipId: UUID!, percentageBp: Int!, expectedVersion: Int! }
 input NominateOwnerInput { sharedProfileId: UUID!, nomineeMembershipId: UUID! }   # nominee must be ACTIVE
 input SetDeclaredIncomeInput { sharedProfileId: UUID!, membershipId: UUID!, amountCents: BigInt! }  # FR-011
+input CreatePersonalAccountInput { type: AccountType!, name: String!, currency: String!, openingBalanceCents: BigInt! }  # personal, isolated (FR-010a)
+input ContributeFromAccountInput { accountId: UUID!, sharedProfileId: UUID!, membershipId: UUID!, amountCents: BigInt! }  # only the amount enters the pool (FR-010)
 
 # Mutations on mutable shared records accept `expectedVersion`; a stale value returns a CONFLICT error (FR-006a).
 
@@ -134,6 +136,10 @@ type Mutation {
   updateInvestmentValue(investmentId: UUID!, newValueCents: BigInt!, expectedVersion: Int!): SharedInvestment!
   createSharedBudget(sharedProfileId: UUID!, category: String!, limitCents: BigInt!): SharedBudget!   # scoped to current period (I2)
   recordBudgetSpend(budgetId: UUID!, amountCents: BigInt!, expectedVersion: Int!): SharedBudget!
+
+  # Personal accounts (US6) — isolated from shared profiles (FR-010/FR-010a)
+  createPersonalAccount(input: CreatePersonalAccountInput!): Account!
+  contributeFromAccount(input: ContributeFromAccountInput!): Account!   # debits only the contributed amount
 }
 
 # ---------- Subscriptions (live standings / pool) ----------

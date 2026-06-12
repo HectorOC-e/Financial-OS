@@ -171,6 +171,37 @@ Después de `/speckit-specify`: `/speckit-clarify` → `/speckit-plan` → `/spe
 > CI con macOS). Los comandos PowerShell de este README provienen de una máquina Windows usada
 > para la Feature 001 — en Ubuntu son los mismos `docker compose` y `pnpm` sin cambios.
 
+## Backlog — feature pequeña de "calidad de cuenta y conveniencia" (más adelante)
+
+Ideas dejadas explícitamente **fuera del alcance** de la Feature 002 durante `/speckit-clarify`.
+Agruparlas en una feature pequeña posterior (no urgente, no bloqueante). Redactar su prompt cuando
+002 esté cerrada.
+
+Diferidas en el clarify de la 002:
+
+- **Desbloqueo biométrico** (Face ID / huella) para reabrir la app sin re-introducir contraseña.
+- **Notificaciones push** — p. ej. "te invitaron a un perfil", "se registró una contribución",
+  recordatorios de periodo. Implica un servicio de mensajería (FCM/APNs) y permisos por dispositivo.
+- **"Cerrar sesión en todos los dispositivos"** (revocación global de sesión) — hoy el sign-out es
+  por dispositivo y se permiten sesiones concurrentes.
+- **Telemetría / crash-reporting en el cliente** — analítica de uso y reporte de fallos (respetando
+  la postura PII: nunca credenciales/tokens en los reportes).
+
+Sugerencias adicionales en la misma línea:
+
+- **Gestión de sesiones activas** — pantalla que liste dispositivos con sesión y permita cerrarlas
+  individualmente (complementa la revocación global).
+- **Autoeliminación de cuenta y exportación de datos** — borrar la cuenta y descargar los datos
+  propios (alineado con expectativas tipo GDPR; encaja con la postura PII existente).
+- **MFA / verificación en dos pasos** opcional para la cuenta (Supabase Auth lo soporta).
+- **Deep linking de invitaciones** — abrir un enlace de invitación directamente en la pantalla
+  correspondiente de la app (móvil y web).
+- **Centro de notificaciones / actividad in-app** — historial de eventos del perfil (invitaciones,
+  contribuciones, cambios de rol) sin depender de push.
+- **Cola de mutaciones offline** — diferida en la 002 (se eligió "online con caché de lectura"); un
+  modo offline-first con sincronización podría ser su propia feature si surge la necesidad.
+- **Preferencias de notificación por correo** — opt-in/opt-out de los correos transaccionales.
+
 ## Documentación
 
 - Mapa de módulos del backend: `apps/api/src/modules/README.md`

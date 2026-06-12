@@ -73,13 +73,14 @@ ver notas en quickstart.md, FORCE RLS no aplica a superusers).
 > `packages/contracts/schema.graphql`: el primer arranque del API lo sobrescribe (pierde
 > comentarios). Cambiar esa ruta a un archivo generado es parte de la Feature 002.
 
-## Siguiente paso: Feature 002 — App móvil end-to-end
+## Siguiente paso: Feature 002 — Cliente multiplataforma (iOS + Android + web) con auth real
 
-La rama remota anterior `002-saas-billing` fue descartada; el slot 002 es la app móvil.
+La rama remota anterior `002-saas-billing` fue descartada; el slot 002 es el cliente completo.
 Para generar la especificación con Spec Kit, ejecuta:
 
 ```text
-/speckit-specify App móvil Flutter end-to-end para FinancialOS (Feature 002).
+/speckit-specify Cliente Flutter multiplataforma (iOS, Android y web) con autenticación real
+para FinancialOS (Feature 002).
 
 Estado actual del que parte esta feature: el backend GraphQL (Feature 001) está completo y
 probado — contrato en packages/contracts/schema.graphql con paginación por cursor, errores con
@@ -87,47 +88,65 @@ extensions.code estables (catálogo en apps/api/src/common/errors/catalog.ts), r
 suscripciones (poolTotalChanged, contributionStandingChanged). En apps/mobile/lib/features/ ya
 existen pantallas sueltas (profiles, allocation, tracking, redistribution, shared_elements,
 accounts, coaching) con repositorios graphql_flutter y estado Riverpod, pero main.dart es un
-placeholder: no hay navegación, no hay provider del cliente GraphQL en el árbol, y el cliente
-manda Authorization Bearer mientras el backend espera los headers x-tenant-id / x-user-id /
-x-auth-subject (stub de gateway, sin login real todavía).
+placeholder: no hay navegación, no hay provider del cliente GraphQL en el árbol, y no existe
+autenticación real — el backend deriva la identidad de headers de gateway (x-tenant-id /
+x-user-id / x-auth-subject) en apps/api/src/common/graphql/graphql-context.ts, diseñado
+explícitamente para ser sustituido por verificación de tokens.
 
 Alcance deseado:
-1. Shell de la app: navegación entre las pantallas existentes (bottom navigation o similar),
-   inyección del GraphQLClient vía Riverpod, configuración de endpoint por entorno (Android
-   emulador 10.0.2.2:3000, dispositivo físico por IP de red local).
-2. Identidad dev: pantalla simple de "elegir identidad" que setee los headers x-tenant-id,
-   x-user-id y x-auth-subject en cada request (puente hasta que exista auth real); diseñar la
-   capa para sustituirla luego por tokens sin tocar las pantallas.
-3. Flujo end-to-end demostrable en un Android físico/emulador: crear perfil compartido, invitar
-   y aceptar, declarar ingreso, asignar porcentaje, registrar contribución, ver standing y pool
-   en vivo (suscripciones), fondear una meta, pagar una deuda, ver coaching.
-4. Manejo de errores del catálogo (CONFLICT → refetch+retry con versión fresca, FORBIDDEN →
-   ocultar acción, RATE_LIMITED → backoff con retryAfterSeconds) y paginación por cursor en las
-   listas (members, contributionRecords, sharedGoals).
-5. Correcciones de backend mínimas que la app destape, incluyendo mover autoSchemaFile fuera del
+1. Autenticación completa, backend + cliente: registro con correo y contraseña (verificación de
+   email), inicio de sesión, recuperación/restablecimiento de contraseña, cierre de sesión, y
+   "Iniciar sesión con Google" (OAuth/OpenID Connect). El backend valida tokens (JWT de corta
+   vida + refresh), crea el tenant y el User + PersonalProfile en el primer acceso, y reemplaza
+   el stub de headers sin tocar los resolvers existentes. Las sesiones respetan el rate limiting
+   y el catálogo de errores ya existentes (UNAUTHENTICATED estable).
+2. Targets: Android, iOS y web (Flutter multiplataforma desde el mismo código). Entorno de
+   desarrollo: Ubuntu 24.04 — Android y web se compilan y prueban localmente; el build de iOS
+   sale por CI con runner macOS (GitHub Actions / Codemagic), la arquitectura y el tooling deben
+   dejarlo listo aunque la firma/publicación de iOS se haga después. En web, GraphQL por HTTPS y
+   suscripciones por WebSocket; cuidar CORS en el API.
+3. Shell de la app: navegación entre las pantallas existentes (responsive: bottom navigation en
+   móvil, rail/drawer en web), inyección del GraphQLClient vía Riverpod con token de sesión,
+   configuración de endpoint por entorno (emulador Android 10.0.2.2:3000, dispositivo físico por
+   IP local, web por origen).
+4. Flujo end-to-end demostrable en Android físico, emulador y navegador: crear cuenta, iniciar
+   sesión, crear perfil compartido, invitar y aceptar, declarar ingreso, asignar porcentaje,
+   registrar contribución, ver standing y pool en vivo (suscripciones), fondear una meta, pagar
+   una deuda, ver coaching.
+5. Manejo de errores del catálogo (CONFLICT → refetch+retry con versión fresca, FORBIDDEN →
+   ocultar acción, RATE_LIMITED → backoff con retryAfterSeconds, UNAUTHENTICATED → re-login) y
+   paginación por cursor en las listas (members, contributionRecords, sharedGoals).
+6. Correcciones de backend mínimas que la app destape, incluyendo mover autoSchemaFile fuera del
    contrato curado.
 
 Restricciones (constitución): el cliente NO contiene lógica de negocio ni cálculos de dinero
 (Principio VII) — los BigInt de centavos solo se formatean en el borde de presentación; toda
-validación es del servidor. iOS queda fuera del alcance de esta feature (no hay macOS disponible);
-la arquitectura no debe impedirlo después.
+validación es del servidor; aislamiento multi-tenant y permisos por perfil intactos (Principios
+V y IX); credenciales y tokens nunca en logs (postura PII de data-protection.ts).
 ```
 
 Después de `/speckit-specify`: `/speckit-clarify` → `/speckit-plan` → `/speckit-tasks` →
 `/speckit-analyze` → `/speckit-implement`. El hook de git crea la rama `002-*` automáticamente.
 
-## Pasos siguientes (orden sugerido)
+## Roadmap
 
-1. **Feature 002 — app móvil** (prompt de arriba): es lo que falta para que puedas probar desde tu
-   teléfono Android.
-2. **Auth real**: sustituir el stub de headers por un proveedor de identidad (el contexto GraphQL
-   ya está aislado en `apps/api/src/common/graphql/graphql-context.ts` para ese reemplazo).
-3. **iOS**: build con Mac/CI (p. ej. Codemagic) cuando la app Android esté estable.
-4. **Deploy**: contenedores Linux para el API + Postgres/Redis gestionados; producción exige
+1. **Feature 002 — cliente multiplataforma + auth** (prompt de arriba): registro/login (Google y
+   correo), iOS + Android + web, y el shell que conecta las pantallas ya construidas.
+2. **Feature 003 — paridad del perfil personal (PREVISTA, aún sin prompt)**: hoy el perfil
+   personal solo tiene cuentas aisladas; las metas, deudas, presupuestos y tracking existen
+   únicamente en perfiles compartidos. Esta feature lleva ese mismo comportamiento al perfil
+   personal (metas/deudas/presupuestos propios, periodos y standing individuales), reutilizando
+   los servicios de dominio existentes (Principio X) y manteniendo el aislamiento total del
+   perfil personal (FR-004). Redactar su prompt cuando 002 esté cerrada.
+3. **Deploy**: contenedores Linux para el API + Postgres/Redis gestionados; producción exige
    `sslmode=require` en DATABASE_URL (el arranque falla sin TLS, por diseño) y registrar un SDK
    de OpenTelemetry para exportar trazas/métricas.
-5. **Features 003+**: facturación SaaS (el spec descartado de 002-saas-billing puede reciclarse
+4. **Features 004+**: facturación SaaS (el spec descartado de 002-saas-billing puede reciclarse
    aquí), exportes/analytics, automatizaciones.
+
+> Nota de entorno: el desarrollo se hace en **Ubuntu 24.04** (Android + web localmente; iOS vía
+> CI con macOS). Los comandos PowerShell de este README provienen de una máquina Windows usada
+> para la Feature 001 — en Ubuntu son los mismos `docker compose` y `pnpm` sin cambios.
 
 ## Documentación
 

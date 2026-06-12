@@ -30,11 +30,14 @@ type SharedProfile {
   periodLength: PeriodLength!
   status: ProfileStatus!           # ARCHIVED profiles are read-only (FR-007c)
   owner: Membership!
-  members: [Membership!]!          # scoped by caller permission
+  # Unbounded lists are cursor-paginated (T107/CHK017): `first` clamped to [1,100] (default 50),
+  # `after` is the opaque cursor of the last item of the previous page.
+  members(first: Int, after: String): [Membership!]!          # scoped by caller permission
   accounts: [Account!]!
   currentPlan: ContributionPlan!
   currentPeriod: ContributionPeriod
-  sharedGoals: [SharedGoal!]!
+  contributionRecords(first: Int, after: String, periodId: UUID): [ContributionRecord!]!   # newest first
+  sharedGoals(first: Int, after: String): [SharedGoal!]!
   sharedDebts: [SharedDebt!]!
   sharedInvestments: [SharedInvestment!]!
   sharedBudgets: [SharedBudget!]!

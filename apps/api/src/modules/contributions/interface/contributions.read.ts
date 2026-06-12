@@ -8,6 +8,7 @@ import type { ContributionPlan, Membership, User } from '@prisma/client';
 import { TenancyService, TenantTx } from '../../tenancy/tenancy.service';
 import type { TenantPrincipal } from '../../tenancy/tenant-context';
 import { MoneyType } from '../../../common/graphql/money.type';
+import { PageArgs, prismaPage } from '../../../common/graphql/pagination';
 import { mapMembership } from '../../profiles/interface/dto/profile.mapper';
 import { MembershipType } from '../../profiles/interface/dto/profile.types';
 import { ContributionRepository } from '../infrastructure/contribution.repository';
@@ -61,6 +62,35 @@ export class ContributionsReadService {
       dto.amount = MoneyType.fromCents(rec.amount, profile?.baseCurrency ?? 'USD');
       dto.recordedAt = rec.recordedAt;
       return dto;
+    });
+  }
+
+  /**
+   * Cursor-paginated contribution records for a profile (T107/CHK017), newest first; optionally
+   * scoped to one period. Pagination happens at the query level — records are unbounded.
+   */
+  recordsForProfile(
+    principal: TenantPrincipal,
+    profile: { id: string; baseCurrency: string },
+    page: PageArgs,
+    periodId?: string | null,
+  ): Promise<ContributionRecordType[]> {
+    return this.tenancy.withTenant(principal.tenantId, async (tx) => {
+      const rows = await tx.contributionRecord.findMany({
+        where: { sharedProfileId: profile.id, ...(periodId ? { periodId } : {}) },
+        orderBy: [{ recordedAt: 'desc' }, { id: 'desc' }],
+        ...prismaPage(page),
+      });
+      const dtos: ContributionRecordType[] = [];
+      for (const rec of rows) {
+        const dto = new ContributionRecordType();
+        dto.id = rec.id;
+        dto.membership = await this.membershipDto(tx, rec.membershipId, profile.baseCurrency);
+        dto.amount = MoneyType.fromCents(rec.amount, profile.baseCurrency);
+        dto.recordedAt = rec.recordedAt;
+        dtos.push(dto);
+      }
+      return dtos;
     });
   }
 

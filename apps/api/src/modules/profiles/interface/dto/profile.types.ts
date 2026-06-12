@@ -69,5 +69,6 @@ export class SharedProfileType {
   @Field(() => PeriodLength) periodLength!: PeriodLength;
   @Field(() => ProfileStatus) status!: ProfileStatus;
   @Field(() => MembershipType, { nullable: true }) owner?: MembershipType | null;
-  @Field(() => [MembershipType]) members!: MembershipType[];
+  /** Loaded eagerly by the mapper; exposed via a paginated field resolver (T107). */
+  members!: MembershipType[];
 }

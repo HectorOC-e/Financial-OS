@@ -7,6 +7,7 @@ import type { SharedBudget, SharedDebt, SharedGoal, SharedInvestment } from '@pr
 import { TenancyService, TenantTx } from '../../tenancy/tenancy.service';
 import type { TenantPrincipal } from '../../tenancy/tenant-context';
 import { MoneyType } from '../../../common/graphql/money.type';
+import { PageArgs, prismaPage } from '../../../common/graphql/pagination';
 import { mapMembership } from '../../profiles/interface/dto/profile.mapper';
 import { SharedElementsRepository } from '../infrastructure/shared-elements.repository';
 import { remainingCents } from '../domain/budget';
@@ -27,9 +28,14 @@ export class SharedElementsReadService {
 
   // --- field-resolver lists -----------------------------------------------------------------------
 
-  goalsForProfile(principal: TenantPrincipal, profileId: string, currency: string): Promise<SharedGoalType[]> {
+  goalsForProfile(principal: TenantPrincipal, profileId: string, currency: string, page: PageArgs): Promise<SharedGoalType[]> {
     return this.tenancy.withTenant(principal.tenantId, async (tx) => {
-      const rows = await tx.sharedGoal.findMany({ where: { sharedProfileId: profileId } });
+      // Cursor pagination at the query level (T107): deterministic id order, bounded page size.
+      const rows = await tx.sharedGoal.findMany({
+        where: { sharedProfileId: profileId },
+        orderBy: { id: 'asc' },
+        ...prismaPage(page),
+      });
       return rows.map((g) => mapGoal(g, currency));
     });
   }

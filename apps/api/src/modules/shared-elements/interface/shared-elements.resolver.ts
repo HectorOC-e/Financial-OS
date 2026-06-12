@@ -9,6 +9,7 @@ import { GraphQLBigInt } from 'graphql-scalars';
 import { SharedDebtKind } from '@prisma/client';
 import { GraphQLError } from 'graphql';
 import { Result, isErr, toGraphQLError } from '../../../common/errors';
+import { PageArgs } from '../../../common/graphql/pagination';
 import type { GraphQLContext } from '../../../common/graphql/graphql-context';
 import type { TenantPrincipal } from '../../tenancy/tenant-context';
 import { SharedProfileType } from '../../profiles/interface/dto/profile.types';
@@ -31,9 +32,14 @@ export class SharedElementsResolver {
 
   // --- SharedProfile field resolvers (reads; Viewer-visible) --------------------------------------
 
+  /** Cursor-paginated goals list (T107/CHK017); bounded even when no args are supplied. */
   @ResolveField('sharedGoals', () => [SharedGoalType])
-  sharedGoals(@Context() ctx: GraphQLContext, @Parent() p: SharedProfileType): Promise<SharedGoalType[]> {
-    return this.read.goalsForProfile(principalOf(ctx), p.id, p.baseCurrency);
+  sharedGoals(
+    @Context() ctx: GraphQLContext,
+    @Parent() p: SharedProfileType,
+    @Args() page: PageArgs,
+  ): Promise<SharedGoalType[]> {
+    return this.read.goalsForProfile(principalOf(ctx), p.id, p.baseCurrency, page);
   }
 
   @ResolveField('sharedDebts', () => [SharedDebtType])

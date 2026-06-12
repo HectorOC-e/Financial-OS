@@ -9,6 +9,7 @@
 import { Args, Context, ID, Int, Mutation, Parent, Query, ResolveField, Resolver, Subscription } from '@nestjs/graphql';
 import { GraphQLError } from 'graphql';
 import { Result, isErr, toGraphQLError } from '../../../common/errors';
+import { PageArgs } from '../../../common/graphql/pagination';
 import type { GraphQLContext } from '../../../common/graphql/graphql-context';
 import type { TenantPrincipal } from '../../tenancy/tenant-context';
 import { MoneyType } from '../../../common/graphql/money.type';
@@ -102,6 +103,22 @@ export class ContributionsResolver {
     @Args('periodId', { type: () => ID, nullable: true }) periodId?: string | null,
   ): Promise<MoneyType> {
     return this.read.poolTotal(principalOf(ctx), { id: profile.id, baseCurrency: profile.baseCurrency }, periodId);
+  }
+
+  /** Cursor-paginated contribution records, newest first (T107/CHK017). */
+  @ResolveField('contributionRecords', () => [ContributionRecordType])
+  contributionRecords(
+    @Context() ctx: GraphQLContext,
+    @Parent() profile: SharedProfileType,
+    @Args() page: PageArgs,
+    @Args('periodId', { type: () => ID, nullable: true }) periodId?: string | null,
+  ): Promise<ContributionRecordType[]> {
+    return this.read.recordsForProfile(
+      principalOf(ctx),
+      { id: profile.id, baseCurrency: profile.baseCurrency },
+      page,
+      periodId,
+    );
   }
 
   @ResolveField('currentPeriod', () => ContributionPeriodType, { nullable: true })

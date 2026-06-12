@@ -13,3 +13,20 @@ records; profile soft-archival (read-only); PostgreSQL RLS multi-tenancy; AI is 
 **Artifacts**: spec.md, plan.md, research.md, data-model.md, contracts/schema.graphql, contracts/events.md,
 quickstart.md.
 <!-- SPECKIT END -->
+
+## Module map (implementation — Phases 1–10 complete)
+
+Backend bounded contexts live in `apps/api/src/modules/` (see `apps/api/src/modules/README.md`
+for the full map): `tenancy`, `permissions`, `events`, `scheduling`, `profiles`, `accounts`,
+`contributions`, `shared-elements`, `ai-coaching`. Cross-cutting code in `apps/api/src/common/`:
+`money` (integer-cents + largest-remainder allocator), `errors` (taxonomy + catalog), `graphql`
+(BigInt scalar, cursor pagination), `persistence` (optimistic concurrency), `cache`, `throttling`
+(rate limits), `observability` (OTel), `config` (env + PII/data-protection posture), `pubsub`.
+The Flutter client is `apps/mobile/` (no business logic); the GraphQL contract source of truth is
+`packages/contracts/schema.graphql`.
+
+## Commands (pnpm only — never npm)
+
+- `pnpm test` (all suites) · `pnpm test:unit` · `pnpm test:contract` · `pnpm test:integration`
+- Integration/contract suites need `docker compose up -d postgres redis`; the unit suite is pure.
+- `pnpm api:dev` runs the API; `pnpm lint` lints all workspaces.

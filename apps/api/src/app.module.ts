@@ -6,9 +6,12 @@ import { APP_GUARD } from '@nestjs/core';
 import { join } from 'path';
 import { LoggerModule } from 'nestjs-pino';
 import { configValidationSchema } from './common/config/config.module';
+import { PII_LOG_REDACTION_PATHS } from './common/config/data-protection';
 import { buildGraphQLContext } from './common/graphql/graphql-context';
 import { DomainError, toGraphQLError } from './common/errors';
 import { CacheModule } from './common/cache/cache.module';
+import { ThrottlingModule } from './common/throttling/throttling.module';
+import { ObservabilityModule } from './common/observability/observability.module';
 import { TenancyModule } from './modules/tenancy/tenancy.module';
 import { EventsModule } from './modules/events/events.module';
 import { SchedulingModule } from './modules/scheduling/scheduling.module';
@@ -34,6 +37,8 @@ import { AiCoachingModule } from './modules/ai-coaching/ai-coaching.module';
     LoggerModule.forRoot({
       pinoHttp: {
         level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
+        // PII/financial values never reach log sinks (T112/CHK026).
+        redact: { paths: [...PII_LOG_REDACTION_PATHS], censor: '[redacted]' },
       },
     }),
     GraphQLModule.forRoot<ApolloDriverConfig>({
@@ -55,6 +60,10 @@ import { AiCoachingModule } from './modules/ai-coaching/ai-coaching.module';
     }),
     // Foundational, globally-exported modules (Phase 2).
     CacheModule,
+    // Abuse prevention (T109): per-principal rate limits on mutations + AI coaching.
+    ThrottlingModule,
+    // OTel spans/metrics + structured per-operation logs (T110).
+    ObservabilityModule,
     TenancyModule,
     EventsModule,
     SchedulingModule,

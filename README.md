@@ -1,0 +1,137 @@
+# FinancialOS
+
+Sistema operativo financiero asistido por IA. SaaS multi-tenant para gestionar **perfiles financieros
+compartidos** (parejas, hogares, sociedades): contribuciones por porcentaje de ingreso, metas, deudas,
+inversiones y presupuestos compartidos, con cuentas personales totalmente aisladas y coaching de IA
+de solo lectura.
+
+Desarrollado con **Spec Kit** (spec → plan → tasks → implement). Constitución del proyecto en
+`.specify/memory/constitution.md`.
+
+## Estado actual (2026-06-12)
+
+### ✅ Feature 001 — Shared Financial Profiles: COMPLETA
+
+Las 10 fases / 116 tareas de `specs/001-shared-financial-profiles/tasks.md` están implementadas y
+verificadas:
+
+| Verificación | Resultado |
+|--------------|-----------|
+| Unit (dominio puro + property-based) | ✅ 16 suites, 128 tests |
+| Contract (SDL vs contrato curado) | ✅ 5 suites, 47 tests |
+| Integración (US1–US7 + RLS, Postgres+Redis reales) | ✅ 16 suites, 20 tests |
+| Typecheck + ESLint | ✅ limpios |
+
+Cobertura funcional: gobernanza de perfiles (roles, invitaciones con expiración 14d, transferencia
+de propiedad, archivado read-only), asignación porcentual con tope cross-profile 100%, tracking de
+contribuciones con periodos auto-rotativos, redistribución preservando historial, elementos
+compartidos (metas/deudas/tarjetas/inversiones/presupuestos), aislamiento de cuentas personales,
+coaching IA read-only (OpenRouter con fallback determinista), paginación por cursor, rate limiting,
+observabilidad OTel, catálogo de errores y postura PII/cifrado.
+
+### 📍 Dónde está la app
+
+```
+apps/api/        Backend NestJS + GraphQL (code-first) + Prisma + PostgreSQL 16 + Redis 7
+                 → FUNCIONAL: probable hoy vía GraphQL Playground (ver "Cómo probar")
+apps/mobile/     Cliente Flutter 3 (Riverpod + graphql_flutter)
+                 → PANTALLAS CONSTRUIDAS pero SIN CONECTAR: main.dart sigue siendo el
+                   placeholder; falta el shell (navegación + cliente GraphQL + identidad)
+packages/contracts/schema.graphql   Contrato GraphQL (fuente de verdad)
+specs/001-shared-financial-profiles/  Artefactos Spec Kit (spec, plan, tasks, quickstart con
+                                      resultados de validación registrados)
+```
+
+**Backend** — listo para probar. Auth es aún un stub de gateway: cada request necesita los headers
+`x-tenant-id`, `x-user-id`, `x-auth-subject` (UUIDs cualesquiera en dev).
+
+**Móvil** — existen las pantallas de perfiles, allocation, tracking, redistribución, elementos
+compartidos, cuentas y coaching (`apps/mobile/lib/features/`), pero no están montadas en `main.dart`
+y el cliente GraphQL manda `Authorization: Bearer` mientras el backend espera los headers `x-*`.
+**Esa brecha es exactamente la Feature 002** (ver abajo).
+
+## Cómo probar (backend, hoy)
+
+```powershell
+docker compose up -d postgres redis
+# apps/api/.env →
+#   DATABASE_URL="postgresql://financial_os:financial_os@localhost:5432/financial_os"
+#   REDIS_URL="redis://localhost:6379"
+pnpm install          # pnpm SIEMPRE, nunca npm
+pnpm --filter @financial-os/api prisma:migrate
+pnpm api:dev          # Playground en http://localhost:3000/graphql
+```
+
+En el Playground agrega los headers de identidad y ejecuta los escenarios de
+`specs/001-shared-financial-profiles/quickstart.md` (sección "Validation scenarios").
+
+Suites: `pnpm test:unit` · `pnpm test:contract` · `pnpm test:integration` (estas dos últimas
+requieren Docker arriba; la de integración debe correr con un rol de BD **no superusuario** —
+ver notas en quickstart.md, FORCE RLS no aplica a superusers).
+
+> ⚠️ `app.module.ts` tiene `autoSchemaFile` apuntando al contrato curado
+> `packages/contracts/schema.graphql`: el primer arranque del API lo sobrescribe (pierde
+> comentarios). Cambiar esa ruta a un archivo generado es parte de la Feature 002.
+
+## Siguiente paso: Feature 002 — App móvil end-to-end
+
+La rama remota anterior `002-saas-billing` fue descartada; el slot 002 es la app móvil.
+Para generar la especificación con Spec Kit, ejecuta:
+
+```text
+/speckit-specify App móvil Flutter end-to-end para FinancialOS (Feature 002).
+
+Estado actual del que parte esta feature: el backend GraphQL (Feature 001) está completo y
+probado — contrato en packages/contracts/schema.graphql con paginación por cursor, errores con
+extensions.code estables (catálogo en apps/api/src/common/errors/catalog.ts), rate limiting y
+suscripciones (poolTotalChanged, contributionStandingChanged). En apps/mobile/lib/features/ ya
+existen pantallas sueltas (profiles, allocation, tracking, redistribution, shared_elements,
+accounts, coaching) con repositorios graphql_flutter y estado Riverpod, pero main.dart es un
+placeholder: no hay navegación, no hay provider del cliente GraphQL en el árbol, y el cliente
+manda Authorization Bearer mientras el backend espera los headers x-tenant-id / x-user-id /
+x-auth-subject (stub de gateway, sin login real todavía).
+
+Alcance deseado:
+1. Shell de la app: navegación entre las pantallas existentes (bottom navigation o similar),
+   inyección del GraphQLClient vía Riverpod, configuración de endpoint por entorno (Android
+   emulador 10.0.2.2:3000, dispositivo físico por IP de red local).
+2. Identidad dev: pantalla simple de "elegir identidad" que setee los headers x-tenant-id,
+   x-user-id y x-auth-subject en cada request (puente hasta que exista auth real); diseñar la
+   capa para sustituirla luego por tokens sin tocar las pantallas.
+3. Flujo end-to-end demostrable en un Android físico/emulador: crear perfil compartido, invitar
+   y aceptar, declarar ingreso, asignar porcentaje, registrar contribución, ver standing y pool
+   en vivo (suscripciones), fondear una meta, pagar una deuda, ver coaching.
+4. Manejo de errores del catálogo (CONFLICT → refetch+retry con versión fresca, FORBIDDEN →
+   ocultar acción, RATE_LIMITED → backoff con retryAfterSeconds) y paginación por cursor en las
+   listas (members, contributionRecords, sharedGoals).
+5. Correcciones de backend mínimas que la app destape, incluyendo mover autoSchemaFile fuera del
+   contrato curado.
+
+Restricciones (constitución): el cliente NO contiene lógica de negocio ni cálculos de dinero
+(Principio VII) — los BigInt de centavos solo se formatean en el borde de presentación; toda
+validación es del servidor. iOS queda fuera del alcance de esta feature (no hay macOS disponible);
+la arquitectura no debe impedirlo después.
+```
+
+Después de `/speckit-specify`: `/speckit-clarify` → `/speckit-plan` → `/speckit-tasks` →
+`/speckit-analyze` → `/speckit-implement`. El hook de git crea la rama `002-*` automáticamente.
+
+## Pasos siguientes (orden sugerido)
+
+1. **Feature 002 — app móvil** (prompt de arriba): es lo que falta para que puedas probar desde tu
+   teléfono Android.
+2. **Auth real**: sustituir el stub de headers por un proveedor de identidad (el contexto GraphQL
+   ya está aislado en `apps/api/src/common/graphql/graphql-context.ts` para ese reemplazo).
+3. **iOS**: build con Mac/CI (p. ej. Codemagic) cuando la app Android esté estable.
+4. **Deploy**: contenedores Linux para el API + Postgres/Redis gestionados; producción exige
+   `sslmode=require` en DATABASE_URL (el arranque falla sin TLS, por diseño) y registrar un SDK
+   de OpenTelemetry para exportar trazas/métricas.
+5. **Features 003+**: facturación SaaS (el spec descartado de 002-saas-billing puede reciclarse
+   aquí), exportes/analytics, automatizaciones.
+
+## Documentación
+
+- Mapa de módulos del backend: `apps/api/src/modules/README.md`
+- Guía de validación + resultados: `specs/001-shared-financial-profiles/quickstart.md`
+- Plan técnico: `specs/001-shared-financial-profiles/plan.md`
+- Contrato GraphQL: `packages/contracts/schema.graphql` · Eventos: `specs/.../contracts/events.md`

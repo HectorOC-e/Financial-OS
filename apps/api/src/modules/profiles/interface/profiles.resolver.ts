@@ -6,10 +6,11 @@
  * archived-write rejection (FR-007c), and optimistic concurrency (FR-006a) all live behind these
  * calls in ProfilesService. Domain errors are surfaced with a stable `extensions.code`.
  */
-import { Args, Context, ID, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { Args, Context, ID, Int, Mutation, Parent, Query, ResolveField, Resolver } from '@nestjs/graphql';
 import { MemberRole } from '@prisma/client';
 import { GraphQLError } from 'graphql';
 import { Result, isErr, toGraphQLError } from '../../../common/errors';
+import { PageArgs, pageSlice } from '../../../common/graphql/pagination';
 import type { GraphQLContext } from '../../../common/graphql/graphql-context';
 import type { TenantPrincipal } from '../../tenancy/tenant-context';
 import { ProfilesService } from '../application/profiles.service';
@@ -42,6 +43,14 @@ export class ProfilesResolver {
   @Query(() => [MembershipType])
   myMemberships(@Context() ctx: GraphQLContext): Promise<MembershipType[]> {
     return this.read.myMemberships(principalOf(ctx));
+  }
+
+  // --- field resolvers ------------------------------------------------------------------------------
+
+  /** Cursor-paginated members list (T107/CHK017); bounded even when no args are supplied. */
+  @ResolveField('members', () => [MembershipType])
+  members(@Parent() profile: SharedProfileType, @Args() page: PageArgs): MembershipType[] {
+    return pageSlice(profile.members ?? [], page);
   }
 
   // --- mutations ----------------------------------------------------------------------------------

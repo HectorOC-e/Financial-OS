@@ -2,6 +2,8 @@
  * Typed configuration validation. Fails fast at startup if required env vars are missing.
  * Used by ConfigModule.forRoot({ validate: configValidationSchema }).
  */
+import { assertDataProtectionPosture } from './data-protection';
+
 export interface AppConfig {
   DATABASE_URL: string;
   REDIS_URL: string;
@@ -18,6 +20,12 @@ export function configValidationSchema(raw: Record<string, unknown>): AppConfig 
     }
     return value;
   };
+
+  // Fail fast in production when the DB connection does not request TLS (T112/CHK026).
+  assertDataProtectionPosture({
+    DATABASE_URL: required('DATABASE_URL'),
+    NODE_ENV: typeof raw.NODE_ENV === 'string' ? raw.NODE_ENV : 'development',
+  });
 
   return {
     DATABASE_URL: required('DATABASE_URL'),

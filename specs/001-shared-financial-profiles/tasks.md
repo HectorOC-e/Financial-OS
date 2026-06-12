@@ -234,16 +234,16 @@ archival (FR-007c); and analysis fixes: 64-bit `BigInt` money (I1), period-scope
 
 ## Phase 10: Polish & Cross-Cutting Concerns
 
-- [ ] T107 [P] Add cursor pagination to unbounded GraphQL list fields (members, contribution records, goals) in `apps/api/src/common/graphql/pagination.ts` (design-gate CHK017)
-- [ ] T108 [P] Define and document the domain error taxonomy + GraphQL error codes (incl. CONFLICT/FORBIDDEN) in `apps/api/src/common/errors/catalog.ts` (design-gate CHK016)
-- [ ] T109 [P] Add rate limiting for mutations and OpenRouter calls in `apps/api/src/common/throttling/` (design-gate CHK027)
-- [ ] T110 [P] Add metrics + tracing (OpenTelemetry) and structured-log fields in `apps/api/src/common/observability/` (design-gate CHK004)
-- [ ] T111 [P] Add currency-mismatch rejection guard (single currency per profile) in `apps/api/src/modules/shared-elements/domain/` (design-gate CHK041)
-- [ ] T112 [P] Add data-at-rest encryption / PII-handling configuration for financial fields (analysis C1, design-gate CHK026)
-- [ ] T113 Run `quickstart.md` end-to-end validation scenarios and record results in `specs/001-shared-financial-profiles/quickstart.md`
-- [ ] T114 [P] Verify SDL export matches `packages/contracts/schema.graphql` and run full contract suite (`pnpm test:contract`)
-- [ ] T115 [P] Add property-based tests for largest-remainder allocator and reconciliation invariants in `apps/api/test/unit/property/`
-- [ ] T116 Update `CLAUDE.md` and module READMEs with finalized module map and run `pnpm test` (all suites green)
+- [X] T107 [P] Add cursor pagination to unbounded GraphQL list fields (members, contribution records, goals) in `apps/api/src/common/graphql/pagination.ts` (design-gate CHK017)
+- [X] T108 [P] Define and document the domain error taxonomy + GraphQL error codes (incl. CONFLICT/FORBIDDEN) in `apps/api/src/common/errors/catalog.ts` (design-gate CHK016)
+- [X] T109 [P] Add rate limiting for mutations and OpenRouter calls in `apps/api/src/common/throttling/` (design-gate CHK027)
+- [X] T110 [P] Add metrics + tracing (OpenTelemetry) and structured-log fields in `apps/api/src/common/observability/` (design-gate CHK004)
+- [X] T111 [P] Add currency-mismatch rejection guard (single currency per profile) in `apps/api/src/modules/shared-elements/domain/` (design-gate CHK041)
+- [X] T112 [P] Add data-at-rest encryption / PII-handling configuration for financial fields (analysis C1, design-gate CHK026)
+- [X] T113 Run `quickstart.md` end-to-end validation scenarios and record results in `specs/001-shared-financial-profiles/quickstart.md`
+- [X] T114 [P] Verify SDL export matches `packages/contracts/schema.graphql` and run full contract suite (`pnpm test:contract`)
+- [X] T115 [P] Add property-based tests for largest-remainder allocator and reconciliation invariants in `apps/api/test/unit/property/`
+- [X] T116 Update `CLAUDE.md` and module READMEs with finalized module map and run `pnpm test` (all suites green)
 
 ---
 

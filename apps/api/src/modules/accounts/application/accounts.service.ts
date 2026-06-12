@@ -18,6 +18,7 @@ import type { TenantPrincipal } from '../../tenancy/tenant-context';
 import { ProfileRepository } from '../../profiles/infrastructure/profile.repository';
 import { ContributionRepository } from '../../contributions/infrastructure/contribution.repository';
 import { PeriodService } from '../../contributions/application/period.service';
+import { ensureProfileCurrency } from '../../shared-elements/domain/currency-guard';
 import { AccountRepository } from '../infrastructure/account.repository';
 import { validateOpeningBalance, withdrawForContribution } from '../domain/account';
 
@@ -101,6 +102,11 @@ export class AccountsService {
       const profile = await tx.sharedProfile.findUnique({ where: { id: input.sharedProfileId } });
       if (!profile) return err(DomainError.notFound('Shared profile not found'));
       if (profile.status !== 'ACTIVE') return err(DomainError.archived());
+
+      // Single currency per profile (T111/CHK041): a personal account in another currency cannot
+      // contribute — no implicit conversion ever happens.
+      const sameCurrency = ensureProfileCurrency(profile.baseCurrency, account.currency, { accountId: account.id });
+      if (isErr(sameCurrency)) return sameCurrency;
 
       const withdrawal = withdrawForContribution(account.balance, input.amountCents);
       if (isErr(withdrawal)) return withdrawal;

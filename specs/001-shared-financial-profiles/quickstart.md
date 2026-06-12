@@ -95,3 +95,32 @@ Run these GraphQL operations (e.g., in the playground) in order. Each maps to a 
 | Period rollover | period auto-closes; next opens with fresh snapshot | FR-016a |
 | Archival | sole-owner archive → read-only, history retained | FR-007c |
 | Money width | large balances handled without overflow | FR-024 / analysis I1 |
+
+## Validation results (T113 — recorded 2026-06-12)
+
+Executed against local Docker PostgreSQL 16 + Redis 7 (`docker compose up -d postgres redis`),
+migrations `20260605000001_init` + `20260605000002_rls` applied, tests run as a **non-superuser**
+role (`app_user`) so RLS is actually enforced (FORCE RLS does not bind superusers — the default
+`financial_os` compose user bypasses it; create a plain role for any RLS validation).
+
+| Suite | Command | Result |
+|-------|---------|--------|
+| Domain unit (incl. property suites, T115) | `pnpm test:unit` | ✅ 16 suites, 128 tests passed |
+| GraphQL contract (incl. SDL conformance, T114) | `pnpm test:contract` | ✅ 5 suites, 47 tests passed |
+| Integration (US1–US7 + RLS) | `pnpm test:integration` | ✅ 16 suites, 20 tests passed |
+
+Scenario coverage (each quickstart scenario is automated by an integration spec):
+
+| Quickstart scenario | Automated by | Result |
+|---------------------|--------------|--------|
+| 1. Create & govern (roles, invites, expiry, CONFLICT, archive) | `us1-lifecycle`, `us1-permissions`, `us1-concurrency`, `us1-isolation` | ✅ |
+| 2. Percentage allocation + cross-profile cap | `us2-cap` | ✅ |
+| 3. Track contributions / reconciliation / freshness | `us3-reconciliation`, `us3-freshness`, `us3-rollover` | ✅ |
+| 4. Redistribution preserves history | `us4-history` | ✅ |
+| 5. Shared elements (overpayment, reassignment, shortfall non-blocking) | `us5-overpayment`, `us5-reassign`, `us5-shortfall-nonblocking` | ✅ |
+| 6. Personal-account isolation | `us6-personal-isolation` | ✅ |
+| 7. AI coaching read-only + scope | `us7-ai-readonly`, `us7-ai-scope` | ✅ |
+| Tenant isolation (default-deny) | `rls-isolation` | ✅ |
+
+Not exercised in this run: live OpenRouter call (no API key in the test environment — the
+deterministic fallback path is what `us7-ai-readonly` validates) and the Flutter mobile client.

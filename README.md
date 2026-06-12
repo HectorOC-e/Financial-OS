@@ -94,29 +94,43 @@ x-user-id / x-auth-subject) en apps/api/src/common/graphql/graphql-context.ts, d
 explícitamente para ser sustituido por verificación de tokens.
 
 Alcance deseado:
-1. Autenticación completa, backend + cliente: registro con correo y contraseña (verificación de
-   email), inicio de sesión, recuperación/restablecimiento de contraseña, cierre de sesión, y
-   "Iniciar sesión con Google" (OAuth/OpenID Connect). El backend valida tokens (JWT de corta
-   vida + refresh), crea el tenant y el User + PersonalProfile en el primer acceso, y reemplaza
-   el stub de headers sin tocar los resolvers existentes. Las sesiones respetan el rate limiting
-   y el catálogo de errores ya existentes (UNAUTHENTICATED estable).
+1. Autenticación completa con Supabase Auth (el proyecto ya usa Supabase como Postgres — ver
+   DATABASE_URL en apps/api/.env — así que Supabase gestiona también identidad): registro con
+   correo y contraseña (con verificación de email), inicio de sesión, recuperación/restablecimiento
+   de contraseña, cierre de sesión, y "Iniciar sesión con Google" (OAuth). El cliente Flutter usa
+   el SDK supabase_flutter para el flujo de sesión; el backend NestJS valida el JWT emitido por
+   Supabase (verificación de firma con el JWKS/secret del proyecto), mapea el `sub` de Supabase al
+   tenant + User + PersonalProfile (creándolos en el primer acceso), y reemplaza el stub de headers
+   x-* en graphql-context.ts sin tocar los resolvers existentes. Las sesiones respetan el rate
+   limiting y el catálogo de errores ya existentes (UNAUTHENTICATED estable). Evaluar en /clarify si
+   conviene RLS de Supabase además de la RLS propia, o sólo usar Supabase para identidad.
 2. Targets: Android, iOS y web (Flutter multiplataforma desde el mismo código). Entorno de
    desarrollo: Ubuntu 24.04 — Android y web se compilan y prueban localmente; el build de iOS
    sale por CI con runner macOS (GitHub Actions / Codemagic), la arquitectura y el tooling deben
    dejarlo listo aunque la firma/publicación de iOS se haga después. En web, GraphQL por HTTPS y
-   suscripciones por WebSocket; cuidar CORS en el API.
+   suscripciones por WebSocket; cuidar CORS en el API y los redirect URLs de OAuth por plataforma.
 3. Shell de la app: navegación entre las pantallas existentes (responsive: bottom navigation en
    móvil, rail/drawer en web), inyección del GraphQLClient vía Riverpod con token de sesión,
    configuración de endpoint por entorno (emulador Android 10.0.2.2:3000, dispositivo físico por
    IP local, web por origen).
-4. Flujo end-to-end demostrable en Android físico, emulador y navegador: crear cuenta, iniciar
+4. Diseño y experiencia (prioridad alta): interfaz moderna, futurista, animada y agradable, con
+   UX/UI cuidada. Usar las skills de diseño disponibles en el repo — `ui-ux-pro-max` y
+   `frontend-design` — y aplicar principios de motion/animación (transiciones con propósito,
+   jerarquía, microinteracciones, feedback inmediato en cada mutación, estados de carga/optimistas,
+   respeto a "reduce motion"). Sistema de temas completo: modo claro y oscuro, y un color de acento
+   (secundario) personalizable por el usuario que se propaga por toda la app. Definir tokens de
+   diseño (color, tipografía, espaciado, radios, sombras, curvas y duraciones de animación) y un
+   theming centralizado; las pantallas existentes se rediseñan contra ese sistema, no al revés.
+   Animar las transiciones de navegación, las listas (entrada escalonada), los cambios de standing
+   y pool en vivo, y los estados vacíos/error.
+5. Flujo end-to-end demostrable en Android físico, emulador y navegador: crear cuenta, iniciar
    sesión, crear perfil compartido, invitar y aceptar, declarar ingreso, asignar porcentaje,
    registrar contribución, ver standing y pool en vivo (suscripciones), fondear una meta, pagar
    una deuda, ver coaching.
-5. Manejo de errores del catálogo (CONFLICT → refetch+retry con versión fresca, FORBIDDEN →
+6. Manejo de errores del catálogo (CONFLICT → refetch+retry con versión fresca, FORBIDDEN →
    ocultar acción, RATE_LIMITED → backoff con retryAfterSeconds, UNAUTHENTICATED → re-login) y
    paginación por cursor en las listas (members, contributionRecords, sharedGoals).
-6. Correcciones de backend mínimas que la app destape, incluyendo mover autoSchemaFile fuera del
+7. Correcciones de backend mínimas que la app destape, incluyendo mover autoSchemaFile fuera del
    contrato curado.
 
 Restricciones (constitución): el cliente NO contiene lógica de negocio ni cálculos de dinero
@@ -125,13 +139,19 @@ validación es del servidor; aislamiento multi-tenant y permisos por perfil inta
 V y IX); credenciales y tokens nunca en logs (postura PII de data-protection.ts).
 ```
 
+> Skills de diseño: `ui-ux-pro-max` y `frontend-design` están instaladas en este repo y deben
+> invocarse durante el diseño/implementación de la UI. La intención de "motion/animación" se
+> expresa como principios en el prompt porque **no hay una skill `design-motion-principles`
+> instalada** — si quieres una skill dedicada, instálala antes de `/speckit-implement`.
+
 Después de `/speckit-specify`: `/speckit-clarify` → `/speckit-plan` → `/speckit-tasks` →
 `/speckit-analyze` → `/speckit-implement`. El hook de git crea la rama `002-*` automáticamente.
 
 ## Roadmap
 
-1. **Feature 002 — cliente multiplataforma + auth** (prompt de arriba): registro/login (Google y
-   correo), iOS + Android + web, y el shell que conecta las pantallas ya construidas.
+1. **Feature 002 — cliente multiplataforma + auth + diseño** (prompt de arriba): auth con Supabase
+   (Google y correo, recuperación de contraseña), iOS + Android + web, UI moderna/animada con
+   temas claro-oscuro y acento personalizable, y el shell que conecta las pantallas ya construidas.
 2. **Feature 003 — paridad del perfil personal (PREVISTA, aún sin prompt)**: hoy el perfil
    personal solo tiene cuentas aisladas; las metas, deudas, presupuestos y tracking existen
    únicamente en perfiles compartidos. Esta feature lleva ese mismo comportamiento al perfil

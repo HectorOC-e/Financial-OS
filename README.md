@@ -114,10 +114,11 @@ Alcance deseado:
    configuración de endpoint por entorno (emulador Android 10.0.2.2:3000, dispositivo físico por
    IP local, web por origen).
 4. Diseño y experiencia (prioridad alta): interfaz moderna, futurista, animada y agradable, con
-   UX/UI cuidada. Usar las skills de diseño disponibles en el repo — `ui-ux-pro-max` y
-   `frontend-design` — y aplicar principios de motion/animación (transiciones con propósito,
-   jerarquía, microinteracciones, feedback inmediato en cada mutación, estados de carga/optimistas,
-   respeto a "reduce motion"). Sistema de temas completo: modo claro y oscuro, y un color de acento
+   UX/UI cuidada. Usar las skills de diseño instaladas en el repo — `ui-ux-pro-max`,
+   `frontend-design` y `design-motion-principles` (motion: transiciones con propósito, tokens de
+   easing/duración, jerarquía, microinteracciones, feedback inmediato en cada mutación, estados de
+   carga/optimistas, presupuesto de rendimiento y respeto a "reduce motion"). Sistema de temas
+   completo: modo claro y oscuro, y un color de acento
    (secundario) personalizable por el usuario que se propaga por toda la app. Definir tokens de
    diseño (color, tipografía, espaciado, radios, sombras, curvas y duraciones de animación) y un
    theming centralizado; las pantallas existentes se rediseñan contra ese sistema, no al revés.
@@ -139,10 +140,12 @@ validación es del servidor; aislamiento multi-tenant y permisos por perfil inta
 V y IX); credenciales y tokens nunca en logs (postura PII de data-protection.ts).
 ```
 
-> Skills de diseño: `ui-ux-pro-max` y `frontend-design` están instaladas en este repo y deben
-> invocarse durante el diseño/implementación de la UI. La intención de "motion/animación" se
-> expresa como principios en el prompt porque **no hay una skill `design-motion-principles`
-> instalada** — si quieres una skill dedicada, instálala antes de `/speckit-implement`.
+> Skills de diseño instaladas en este repo (invócalas durante el diseño/implementación de la UI):
+> `ui-ux-pro-max`, `frontend-design` y `design-motion-principles`. Esta última se creó como skill
+> de proyecto (`.claude/skills/` y `.agents/skills/`) porque no existe una equivalente en las
+> fuentes públicas de skills; cubre cuándo animar, tokens de easing/duración, coreografía,
+> microinteracciones, presupuesto de rendimiento y accesibilidad (reduce motion), con guía
+> específica de Flutter.
 
 Después de `/speckit-specify`: `/speckit-clarify` → `/speckit-plan` → `/speckit-tasks` →
 `/speckit-analyze` → `/speckit-implement`. El hook de git crea la rama `002-*` automáticamente.
